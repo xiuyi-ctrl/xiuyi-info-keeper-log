@@ -79,15 +79,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "分类管理账号密码、证件、金融、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
+          "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
       },
-      { property: "og:title", content: "我的信息保险箱" },
+      { property: "og:title", content: "我的信息保险箱 · 个人信息安全记录工具" },
       {
         property: "og:description",
-        content: "私人信息保险箱：分类、时间轴、脱敏、回收站、统计一站式管理。",
+        content: "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "我的信息保险箱 · 个人信息安全记录工具" },
+      { name: "twitter:description", content: "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。" },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
