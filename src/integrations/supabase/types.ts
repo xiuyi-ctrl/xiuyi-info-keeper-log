@@ -14,7 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      item_attachments: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          id: string
+          item_id: string
+          mime_type: string | null
+          size: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          id?: string
+          item_id: string
+          mime_type?: string | null
+          size?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          id?: string
+          item_id?: string
+          mime_type?: string | null
+          size?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "item_attachments_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      item_history: {
+        Row: {
+          action: string
+          changed_at: string
+          id: string
+          item_id: string
+          snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          action: string
+          changed_at?: string
+          id?: string
+          item_id: string
+          snapshot: Json
+          user_id: string
+        }
+        Update: {
+          action?: string
+          changed_at?: string
+          id?: string
+          item_id?: string
+          snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      items: {
+        Row: {
+          account: string | null
+          category: string
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          extra: Json
+          id: string
+          name: string
+          notes: string | null
+          password_hint: string | null
+          phone: string | null
+          tags: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          extra?: Json
+          id?: string
+          name: string
+          notes?: string | null
+          password_hint?: string | null
+          phone?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account?: string | null
+          category?: string
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          extra?: Json
+          id?: string
+          name?: string
+          notes?: string | null
+          password_hint?: string | null
+          phone?: string | null
+          tags?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
