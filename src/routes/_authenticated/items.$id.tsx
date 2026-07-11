@@ -44,7 +44,7 @@ function ItemDetail() {
         .eq("item_id", id)
         .order("changed_at", { ascending: false });
       if (error) throw error;
-      return (data ?? []) as HistoryEntry[];
+      return (data ?? []) as unknown as HistoryEntry[];
     },
   });
 
@@ -65,13 +65,13 @@ function ItemDetail() {
   async function moveToTrash() {
     if (!confirm("确定删除吗？删除后可在回收站还原（7 天）")) return;
     const { error } = await supabase.from("items").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["items"] });
     toast.success("已移入回收站");
     navigate({ to: "/items" });
   }
 
-  async function handleUpdate(v: ItemFormValues) {
+  async function handleUpdate(v: ItemFormValues): Promise<void> {
     setSubmitting(true);
     const { error } = await supabase.from("items").update({
       name: v.name.trim(),
@@ -84,7 +84,7 @@ function ItemDetail() {
       notes: v.notes || null,
     }).eq("id", id);
     setSubmitting(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["item", id] });
     qc.invalidateQueries({ queryKey: ["history", id] });
     qc.invalidateQueries({ queryKey: ["items"] });

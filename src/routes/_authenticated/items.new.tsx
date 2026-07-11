@@ -15,7 +15,7 @@ function NewItem() {
   const qc = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
 
-  async function handleSubmit(v: ItemFormValues) {
+  async function handleSubmit(v: ItemFormValues): Promise<void> {
     setSubmitting(true);
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) {
@@ -38,7 +38,7 @@ function NewItem() {
       .select("id")
       .single();
     setSubmitting(false);
-    if (error) return toast.error("保存失败", { description: error.message });
+    if (error) { toast.error("保存失败", { description: error.message }); return; }
     qc.invalidateQueries({ queryKey: ["items"] });
     toast.success("已保存");
     if (data) navigate({ to: "/items/$id", params: { id: data.id } });
