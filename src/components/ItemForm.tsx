@@ -61,15 +61,14 @@ export function ItemForm({
   onSubmit,
   submitting,
   submitLabel,
-  onDeleteCategoryRequest,
 }: {
   initial: ItemFormValues;
   itemId?: string;
   onSubmit: (v: ItemFormValues) => Promise<void>;
   submitting: boolean;
   submitLabel: string;
-  onDeleteCategoryRequest?: (key: string) => void;
 }) {
+
   const [values, setValues] = useState<ItemFormValues>(initial);
   const [tagInput, setTagInput] = useState("");
   const [cats, setCats] = useState(getAllCategories());
