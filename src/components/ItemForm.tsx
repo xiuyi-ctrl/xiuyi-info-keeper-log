@@ -103,6 +103,22 @@ export function ItemForm({
     return values.extra[f.key] ?? "";
   }
 
+  async function deleteCustomCategory(key: string, label: string) {
+    if (!confirm(`删除自定义分类「${label}」将同时把该分类下的所有条目移入回收站，确认继续？`)) return;
+    const { error } = await supabase
+      .from("items")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("category", key)
+      .is("deleted_at", null);
+    if (error) return toast.error("删除失败", { description: error.message });
+    removeCustomCategory(key);
+    setCats(getAllCategories());
+    if (values.category === key) setValues((s) => ({ ...s, category: "other", extra: {} }));
+    toast.success(`已删除分类「${label}」，相关条目已移入回收站`);
+  }
+
+
+
   function addTag(t?: string) {
     const raw = (t ?? tagInput).trim().replace(/^#/, "");
     if (!raw) return;
