@@ -108,8 +108,11 @@ function Dashboard() {
                 <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} />
                 <YAxis stroke="var(--muted-foreground)" fontSize={12} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8 }}
+                  contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "#ffffff" }}
+                  itemStyle={{ color: "#ffffff" }}
+                  labelStyle={{ color: "#ffffff" }}
                 />
+
                 <Line type="monotone" dataKey="新增" stroke="var(--vault)" strokeWidth={2} dot={{ r: 3 }} />
                 <Line type="monotone" dataKey="修改" stroke="oklch(0.68 0.18 265)" strokeWidth={2} dot={{ r: 3 }} />
               </LineChart>
