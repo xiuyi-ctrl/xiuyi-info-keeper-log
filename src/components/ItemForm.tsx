@@ -212,16 +212,17 @@ export function ItemForm({
                   >
                     <c.icon className="h-3.5 w-3.5" /> {c.label}
                   </button>
-                  {!c.builtin && onDeleteCategoryRequest && (
+                  {!c.builtin && (
                     <button
                       type="button"
-                      onClick={() => onDeleteCategoryRequest(c.key)}
+                      onClick={() => deleteCustomCategory(c.key, c.label)}
                       title="删除该自定义分类"
                       className="ml-0.5 rounded-full p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                     >
                       <Trash className="h-3 w-3" />
                     </button>
                   )}
+
                 </div>
               ))}
               <button
