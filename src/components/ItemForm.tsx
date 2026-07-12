@@ -537,8 +537,8 @@ function FileTypeIcon({ mime }: { mime: string | null }) {
   );
 }
 
-// Removed unused import warning avoidance
-export function _unused() { removeCustomCategory; }
+
+
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;
