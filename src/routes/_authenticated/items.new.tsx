@@ -34,9 +34,11 @@ function NewItem() {
         phone: v.phone || null,
         email: v.email || null,
         notes: v.notes || null,
+        extra: v.extra ?? {},
       })
       .select("id")
       .single();
+
     setSubmitting(false);
     if (error) { toast.error("保存失败", { description: error.message }); return; }
     qc.invalidateQueries({ queryKey: ["items"] });

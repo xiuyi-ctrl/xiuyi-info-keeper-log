@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Search, Eye, EyeOff, Copy, Check, Plus } from "lucide-react";
+import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
-import { getCategory, getAllCategories, maskValue, type Item } from "@/lib/vault";
+import { getCategory, getAllCategories, maskValue, readField, type Item, type SnapshotWithAttachments } from "@/lib/vault";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -64,6 +65,35 @@ function ItemsList() {
     }
   }
 
+  function exportExcel() {
+    if (cat === "all") {
+      toast.info("请先选择一个具体分类再导出");
+      return;
+    }
+    if (filtered.length === 0) {
+      toast.info("当前筛选没有可导出的条目");
+      return;
+    }
+    const schema = getCategory(cat);
+    const headers = ["名称", "分类", "标签", ...schema.fields.map((f) => f.label), "创建时间", "更新时间"];
+    const rows = filtered.map((it) => {
+      const base = [
+        it.name,
+        schema.label,
+        (it.tags ?? []).map((t) => "#" + t).join(" "),
+      ];
+      const dyn = schema.fields.map((f) => readField(it as SnapshotWithAttachments, f));
+      return [...base, ...dyn, formatDT(it.created_at), formatDT(it.updated_at)];
+    });
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(40, h.length * 3)) }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, schema.label.slice(0, 30));
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `信息保险箱_${schema.label}_${stamp}.xlsx`);
+    toast.success(`已导出 ${filtered.length} 条 ${schema.label}`);
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -71,9 +101,19 @@ function ItemsList() {
           <h1 className="text-3xl font-bold">全部条目</h1>
           <p className="mt-1 text-sm text-muted-foreground">共 {filtered.length} 条</p>
         </div>
-        <Link to="/items/new">
-          <Button className="gradient-accent-bg text-primary-foreground"><Plus className="mr-1 h-4 w-4" /> 新建条目</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={exportExcel}
+            disabled={cat === "all" || filtered.length === 0}
+            title={cat === "all" ? "请先选择一个分类" : "导出当前分类为 Excel"}
+          >
+            <FileSpreadsheet className="mr-1 h-4 w-4" /> 批量导出 Excel
+          </Button>
+          <Link to="/items/new">
+            <Button className="gradient-accent-bg text-primary-foreground"><Plus className="mr-1 h-4 w-4" /> 新建条目</Button>
+          </Link>
+        </div>
       </div>
 
       <div className="panel p-4 space-y-3">
@@ -101,6 +141,11 @@ function ItemsList() {
               <Chip key={t} active={tag === t} onClick={() => setTag(t)}>#{t}</Chip>
             ))}
           </div>
+        )}
+        {cat !== "all" && (
+          <p className="text-xs text-muted-foreground">
+            提示：选择分类后可导出该分类下所有条目为 Excel 文件（含全部字段）。
+          </p>
         )}
       </div>
 
@@ -176,6 +221,10 @@ function ItemsList() {
       )}
     </div>
   );
+}
+
+function formatDT(iso: string): string {
+  try { return new Date(iso).toLocaleString("zh-CN"); } catch { return iso; }
 }
 
 function Chip({ children, active, onClick, color }: { children: React.ReactNode; active?: boolean; onClick?: () => void; color?: string }) {
