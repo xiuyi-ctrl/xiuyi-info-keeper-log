@@ -80,8 +80,11 @@ function Dashboard() {
                     {byCat.map((c, i) => <Cell key={i} fill={c.color} />)}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8 }}
+                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "#ffffff" }}
+                    itemStyle={{ color: "#ffffff" }}
+                    labelStyle={{ color: "#ffffff" }}
                   />
+
                 </PieChart>
               </ResponsiveContainer>
             </div>
