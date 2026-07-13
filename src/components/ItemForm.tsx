@@ -305,7 +305,14 @@ export function ItemForm({
               </Label>
               <Input
                 id={f.key}
-                type={f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
+                type={
+                  f.type === "date" ? "date"
+                  : f.type === "email" ? "email"
+                  : f.type === "tel" ? "tel"
+                  : f.type === "password" ? "password"
+                  : "text"
+                }
+                autoComplete={f.type === "password" ? "new-password" : undefined}
                 value={getFieldValue(f)}
                 onChange={(e) => setFieldValue(f, e.target.value)}
               />
