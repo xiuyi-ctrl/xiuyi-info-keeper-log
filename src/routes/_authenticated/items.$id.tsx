@@ -77,12 +77,32 @@ function ItemDetail() {
   }
 
   async function moveToTrash() {
-    if (!confirm("确定删除吗？删除后可在回收站还原（7 天）")) return;
+    const ok = await confirmDialog({
+      title: "移入回收站？",
+      description: "删除后可在回收站还原（7 天内有效）。",
+      confirmText: "移入回收站",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await supabase.from("items").update({ deleted_at: new Date().toISOString() }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     qc.invalidateQueries({ queryKey: ["items"] });
     toast.success("已移入回收站");
     navigate({ to: "/items" });
+  }
+
+  async function deleteHistoryEntry(h: HistoryEntry) {
+    const ok = await confirmDialog({
+      title: "删除该时间轴记录？",
+      description: `将删除「${new Date(h.changed_at).toLocaleString("zh-CN")}」的历史快照，此操作无法撤销。`,
+      confirmText: "删除记录",
+      destructive: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase.from("item_history").delete().eq("id", h.id);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["history", id] });
+    toast.success("已删除时间轴记录");
   }
 
   async function handleUpdate(v: ItemFormValues): Promise<void> {
