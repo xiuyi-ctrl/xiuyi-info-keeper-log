@@ -281,50 +281,60 @@ function ItemDetail() {
             const changed = diffSnapshots(prev, h.snapshot);
             const { added, removed } = attachmentDiff(prev?.attachments, h.snapshot.attachments);
             return (
-              <button
-                key={h.id}
-                onClick={() => setSnapOpen(h)}
-                className="group relative mb-4 block w-full rounded-lg border border-border/60 bg-surface-elevated/40 p-3 text-left hover:bg-surface-elevated"
-              >
+              <div key={h.id} className="group relative mb-4">
                 <span
-                  className="absolute -left-4 top-4 h-3 w-3 rounded-full ring-4 ring-background"
+                  className="absolute -left-4 top-6 h-3 w-3 rounded-full ring-4 ring-background"
                   style={{ background: actionColor[h.action] }}
                 />
-                <div className="flex items-center justify-between gap-2">
-                  <div>
-                    <span className="text-sm font-medium" style={{ color: actionColor[h.action] }}>
-                      {actionLabel[h.action] ?? h.action}
-                    </span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {new Date(h.changed_at).toLocaleString("zh-CN")}
-                    </span>
-                  </div>
-                  {changed.size > 0 && (
-                    <span className="text-xs text-muted-foreground">
-                      {changed.size} 个字段变更
-                    </span>
-                  )}
+                <div className="flex items-stretch gap-2">
+                  <button
+                    onClick={() => setSnapOpen(h)}
+                    className="flex-1 rounded-lg border border-border/60 bg-surface-elevated/40 p-3 text-left hover:bg-surface-elevated"
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <span className="text-sm font-medium" style={{ color: actionColor[h.action] }}>
+                          {actionLabel[h.action] ?? h.action}
+                        </span>
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          {new Date(h.changed_at).toLocaleString("zh-CN")}
+                        </span>
+                      </div>
+                      {changed.size > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          {changed.size} 个字段变更
+                        </span>
+                      )}
+                    </div>
+                    {changed.size > 0 && (
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {Array.from(changed).map((f) => (
+                          <span key={f} className="rounded bg-vault/10 px-1.5 py-0.5 text-[10px] text-vault">
+                            {FIELD_LABELS[f] ?? f}
+                          </span>
+                        ))}
+                        {added.length > 0 && (
+                          <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-300">
+                            +{added.length} 附件
+                          </span>
+                        )}
+                        {removed.length > 0 && (
+                          <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-300">
+                            −{removed.length} 附件
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => deleteHistoryEntry(h)}
+                    title="删除该时间轴记录"
+                    className="rounded-lg border border-border/60 bg-surface-elevated/40 px-2 text-muted-foreground opacity-0 transition-opacity hover:border-destructive/40 hover:text-destructive group-hover:opacity-100"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
-                {changed.size > 0 && (
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {Array.from(changed).map((f) => (
-                      <span key={f} className="rounded bg-vault/10 px-1.5 py-0.5 text-[10px] text-vault">
-                        {FIELD_LABELS[f] ?? f}
-                      </span>
-                    ))}
-                    {added.length > 0 && (
-                      <span className="rounded bg-green-500/15 px-1.5 py-0.5 text-[10px] text-green-300">
-                        +{added.length} 附件
-                      </span>
-                    )}
-                    {removed.length > 0 && (
-                      <span className="rounded bg-red-500/15 px-1.5 py-0.5 text-[10px] text-red-300">
-                        −{removed.length} 附件
-                      </span>
-                    )}
-                  </div>
-                )}
-              </button>
+              </div>
             );
           })}
         </div>
