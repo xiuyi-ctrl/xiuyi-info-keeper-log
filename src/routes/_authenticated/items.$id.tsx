@@ -221,6 +221,7 @@ function ItemDetail() {
                   </div>
                 );
               }
+              const shouldMask = f.masked || f.type === "password";
               return (
                 <FieldRow
                   key={f.key}
@@ -229,8 +230,8 @@ function ItemDetail() {
                   k={f.key}
                   copied={copied}
                   onCopy={copyText}
-                  masked={f.masked && !reveal[f.key]}
-                  onToggle={f.masked ? () => setReveal((r) => ({ ...r, [f.key]: !r[f.key] })) : undefined}
+                  masked={shouldMask && !reveal[f.key]}
+                  onToggle={shouldMask ? () => setReveal((r) => ({ ...r, [f.key]: !r[f.key] })) : undefined}
                   hint={f.hint}
                 />
               );
