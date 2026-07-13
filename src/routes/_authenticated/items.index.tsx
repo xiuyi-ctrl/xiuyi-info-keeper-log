@@ -1,24 +1,30 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet } from "lucide-react";
+import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
-import { getCategory, getAllCategories, maskValue, readField, type Item, type SnapshotWithAttachments } from "@/lib/vault";
+import {
+  getCategory, getAllCategories, maskValue, readField, removeCustomCategory,
+  type Item, type SnapshotWithAttachments, type ItemAttachment,
+} from "@/lib/vault";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/items/")({
   component: ItemsList,
 });
 
 function ItemsList() {
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [tag, setTag] = useState<string>("all");
   const [reveal, setReveal] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  const [cats, setCats] = useState(getAllCategories());
 
   const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ["items", "list"],
@@ -52,8 +58,6 @@ function ItemsList() {
     });
   }, [items, q, cat, tag]);
 
-  const cats = getAllCategories();
-
   async function copyText(id: string, v: string) {
     try {
       await navigator.clipboard.writeText(v);
@@ -65,7 +69,34 @@ function ItemsList() {
     }
   }
 
-  function exportExcel() {
+  async function deleteCustomCategory(key: string, label: string) {
+    const count = items.filter((i) => i.category === key).length;
+    const ok = await confirmDialog({
+      title: `删除自定义分类「${label}」`,
+      description:
+        count > 0
+          ? `该分类下共有 ${count} 条信息，删除分类会同时将这些信息移入回收站（7 天内仍可还原）。确认继续？`
+          : `分类「${label}」当前没有条目，将从列表中移除。`,
+      confirmText: "删除分类",
+      destructive: true,
+    });
+    if (!ok) return;
+    if (count > 0) {
+      const { error } = await supabase
+        .from("items")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("category", key)
+        .is("deleted_at", null);
+      if (error) return toast.error("删除失败", { description: error.message });
+    }
+    removeCustomCategory(key);
+    setCats(getAllCategories());
+    if (cat === key) setCat("all");
+    qc.invalidateQueries({ queryKey: ["items"] });
+    toast.success(`已删除分类「${label}」`);
+  }
+
+  async function exportExcel() {
     if (cat === "all") {
       toast.info("请先选择一个具体分类再导出");
       return;
@@ -75,18 +106,40 @@ function ItemsList() {
       return;
     }
     const schema = getCategory(cat);
-    const headers = ["名称", "分类", "标签", ...schema.fields.map((f) => f.label), "创建时间", "更新时间"];
+    // Fetch attachments for all items in view
+    const ids = filtered.map((i) => i.id);
+    const { data: attData } = await supabase
+      .from("item_attachments")
+      .select("id,item_id,file_name,file_path,mime_type,size")
+      .in("item_id", ids);
+    const attMap = new Map<string, ItemAttachment[]>();
+    ((attData ?? []) as (ItemAttachment & { item_id: string })[]).forEach((a) => {
+      const list = attMap.get(a.item_id) ?? [];
+      list.push(a);
+      attMap.set(a.item_id, list);
+    });
+
+    const headers = [
+      "名称", "分类", "标签",
+      ...schema.fields.map((f) => f.label),
+      "附件数量", "附件列表",
+      "创建时间", "更新时间",
+    ];
     const rows = filtered.map((it) => {
+      const atts = attMap.get(it.id) ?? [];
       const base = [
         it.name,
         schema.label,
         (it.tags ?? []).map((t) => "#" + t).join(" "),
       ];
       const dyn = schema.fields.map((f) => readField(it as SnapshotWithAttachments, f));
-      return [...base, ...dyn, formatDT(it.created_at), formatDT(it.updated_at)];
+      const attList = atts
+        .map((a) => `${a.file_name} (${formatBytes(a.size)})`)
+        .join("\n");
+      return [...base, ...dyn, atts.length, attList, formatDT(it.created_at), formatDT(it.updated_at)];
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(40, h.length * 3)) }));
+    ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(50, h.length * 3)) }));
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, schema.label.slice(0, 30));
     const stamp = new Date().toISOString().slice(0, 10);
@@ -126,12 +179,24 @@ function ItemsList() {
             className="pl-9"
           />
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Chip active={cat === "all"} onClick={() => setCat("all")}>全部分类</Chip>
           {cats.map((c) => (
-            <Chip key={c.key} active={cat === c.key} onClick={() => setCat(c.key)} color={c.color}>
-              <c.icon className="mr-1 h-3.5 w-3.5" /> {c.label}
-            </Chip>
+            <div key={c.key} className="group inline-flex items-center">
+              <Chip active={cat === c.key} onClick={() => setCat(c.key)} color={c.color}>
+                <c.icon className="mr-1 h-3.5 w-3.5" /> {c.label}
+              </Chip>
+              {!c.builtin && (
+                <button
+                  type="button"
+                  onClick={() => deleteCustomCategory(c.key, c.label)}
+                  title="删除该自定义分类"
+                  className="ml-0.5 rounded-full p-1 text-muted-foreground hover:text-destructive"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              )}
+            </div>
           ))}
         </div>
         {allTags.length > 0 && (
@@ -144,7 +209,7 @@ function ItemsList() {
         )}
         {cat !== "all" && (
           <p className="text-xs text-muted-foreground">
-            提示：选择分类后可导出该分类下所有条目为 Excel 文件（含全部字段）。
+            提示：选择分类后可导出该分类下所有条目为 Excel 文件（含全部字段与附件信息）。
           </p>
         )}
       </div>
@@ -161,6 +226,9 @@ function ItemsList() {
           {filtered.map((it) => {
             const c = getCategory(it.category);
             const isRevealed = reveal[it.id];
+            const isParty = it.category === "party";
+            const partyTime = isParty ? String((it.extra ?? {})["time"] ?? "") : "";
+            const partyIntro = isParty ? String((it.extra ?? {})["introducer"] ?? "") : "";
             return (
               <div key={it.id} className="panel group flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5">
                 <div className="flex items-start justify-between gap-3">
@@ -174,6 +242,23 @@ function ItemsList() {
                     </div>
                   </Link>
                 </div>
+
+                {isParty && (partyTime || partyIntro) && (
+                  <div className="space-y-1.5">
+                    {partyTime && (
+                      <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+                        <span className="text-xs text-muted-foreground shrink-0">时间</span>
+                        <span className="flex-1 truncate text-xs">{partyTime}</span>
+                      </div>
+                    )}
+                    {partyIntro && (
+                      <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+                        <span className="text-xs text-muted-foreground shrink-0">介绍人</span>
+                        <span className="flex-1 truncate text-xs">{partyIntro}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {it.account && (
                   <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
@@ -225,6 +310,12 @@ function ItemsList() {
 
 function formatDT(iso: string): string {
   try { return new Date(iso).toLocaleString("zh-CN"); } catch { return iso; }
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function Chip({ children, active, onClick, color }: { children: React.ReactNode; active?: boolean; onClick?: () => void; color?: string }) {

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, AlertTriangle, Download, Eye, Trash, ExternalLink } from "lucide-react";
+import { X, Plus, Upload, AlertTriangle, Download, Eye, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getAllCategories, addCustomCategory, removeCustomCategory,
+  getAllCategories, addCustomCategory,
   getCategory, DEFAULT_TAGS, MAX_CUSTOM_FIELDS,
   type Item, type FieldDef, type FieldType, type ItemAttachment,
 } from "@/lib/vault";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export type ItemFormValues = {
   name: string;
@@ -103,19 +104,8 @@ export function ItemForm({
     return values.extra[f.key] ?? "";
   }
 
-  async function deleteCustomCategory(key: string, label: string) {
-    if (!confirm(`删除自定义分类「${label}」将同时把该分类下的所有条目移入回收站，确认继续？`)) return;
-    const { error } = await supabase
-      .from("items")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("category", key)
-      .is("deleted_at", null);
-    if (error) return toast.error("删除失败", { description: error.message });
-    removeCustomCategory(key);
-    setCats(getAllCategories());
-    if (values.category === key) setValues((s) => ({ ...s, category: "other", extra: {} }));
-    toast.success(`已删除分类「${label}」，相关条目已移入回收站`);
-  }
+
+
 
 
 
@@ -166,7 +156,13 @@ export function ItemForm({
   }
 
   async function removeAttachment(att: ItemAttachment) {
-    if (!confirm(`删除附件 ${att.file_name}？`)) return;
+    const ok = await confirmDialog({
+      title: "删除附件？",
+      description: `将删除附件「${att.file_name}」，此操作无法撤销。`,
+      confirmText: "删除",
+      destructive: true,
+    });
+    if (!ok) return;
     await supabase.storage.from("vault-attachments").remove([att.file_path]);
     await supabase.from("item_attachments").delete().eq("id", att.id);
     setAttachments((a) => a.filter((x) => x.id !== att.id));
@@ -212,34 +208,22 @@ export function ItemForm({
             <Label>分类</Label>
             <div className="flex flex-wrap gap-2">
               {cats.map((c) => (
-                <div key={c.key} className="group inline-flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      update("category", c.key);
-                      if (c.key !== values.category) setValues((s) => ({ ...s, category: c.key, extra: {} }));
-                    }}
-                    className={
-                      "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs " +
-                      (values.category === c.key
-                        ? "border-vault/60 bg-vault/10 text-vault"
-                        : "border-border bg-surface text-muted-foreground hover:text-foreground")
-                    }
-                  >
-                    <c.icon className="h-3.5 w-3.5" /> {c.label}
-                  </button>
-                  {!c.builtin && (
-                    <button
-                      type="button"
-                      onClick={() => deleteCustomCategory(c.key, c.label)}
-                      title="删除该自定义分类"
-                      className="ml-0.5 rounded-full p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                    >
-                      <Trash className="h-3 w-3" />
-                    </button>
-                  )}
-
-                </div>
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => {
+                    update("category", c.key);
+                    if (c.key !== values.category) setValues((s) => ({ ...s, category: c.key, extra: {} }));
+                  }}
+                  className={
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs " +
+                    (values.category === c.key
+                      ? "border-vault/60 bg-vault/10 text-vault"
+                      : "border-border bg-surface text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  <c.icon className="h-3.5 w-3.5" /> {c.label}
+                </button>
               ))}
               <button
                 type="button"
@@ -321,7 +305,14 @@ export function ItemForm({
               </Label>
               <Input
                 id={f.key}
-                type={f.type === "date" ? "date" : f.type === "email" ? "email" : f.type === "tel" ? "tel" : "text"}
+                type={
+                  f.type === "date" ? "date"
+                  : f.type === "email" ? "email"
+                  : f.type === "tel" ? "tel"
+                  : f.type === "password" ? "password"
+                  : "text"
+                }
+                autoComplete={f.type === "password" ? "new-password" : undefined}
                 value={getFieldValue(f)}
                 onChange={(e) => setFieldValue(f, e.target.value)}
               />
@@ -436,10 +427,14 @@ function NewCategoryDialog({
   function save() {
     if (!label.trim()) return toast.error("请输入分类名");
     const cleaned = fields.filter((f) => f.label.trim());
-    const key = addCustomCategory(label.trim(), cleaned);
-    setLabel("");
-    setFields([]);
-    onCreated(key);
+    try {
+      const key = addCustomCategory(label.trim(), cleaned);
+      setLabel("");
+      setFields([]);
+      onCreated(key);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   return (
@@ -476,6 +471,7 @@ function NewCategoryDialog({
                   <option value="text">文本</option>
                   <option value="textarea">多行</option>
                   <option value="date">日期</option>
+                  <option value="password">密码</option>
                 </select>
                 <button type="button" onClick={() => setFields((s) => s.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
                   <X className="h-4 w-4" />

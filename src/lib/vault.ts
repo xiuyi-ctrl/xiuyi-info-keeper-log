@@ -1,7 +1,7 @@
 import { KeyRound, Flag, FileText, Folder } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type FieldType = "text" | "textarea" | "date" | "email" | "tel";
+export type FieldType = "text" | "textarea" | "date" | "email" | "tel" | "password";
 
 export type FieldDef = {
   key: string;
@@ -88,10 +88,13 @@ export function getCustomCategories(): CategorySchema[] {
 }
 
 export function addCustomCategory(label: string, extraFields: { key: string; label: string; type: FieldType }[]): string {
+  const trimmed = label.trim();
+  const existing = getAllCategories().find((c) => c.label === trimmed);
+  if (existing) throw new Error("分类名已存在，请换一个");
   const cleaned = extraFields.filter((f) => f.label.trim()).slice(0, MAX_CUSTOM_FIELDS);
-  const key = "custom_" + label.trim().replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
+  const key = "custom_" + trimmed.replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
   const list = readStoredCustom();
-  list.push({ key, label: label.trim(), extraFields: cleaned });
+  list.push({ key, label: trimmed, extraFields: cleaned });
   writeStoredCustom(list);
   return key;
 }
