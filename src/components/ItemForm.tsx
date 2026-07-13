@@ -427,10 +427,14 @@ function NewCategoryDialog({
   function save() {
     if (!label.trim()) return toast.error("请输入分类名");
     const cleaned = fields.filter((f) => f.label.trim());
-    const key = addCustomCategory(label.trim(), cleaned);
-    setLabel("");
-    setFields([]);
-    onCreated(key);
+    try {
+      const key = addCustomCategory(label.trim(), cleaned);
+      setLabel("");
+      setFields([]);
+      onCreated(key);
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
   }
 
   return (
