@@ -156,7 +156,13 @@ export function ItemForm({
   }
 
   async function removeAttachment(att: ItemAttachment) {
-    if (!confirm(`删除附件 ${att.file_name}？`)) return;
+    const ok = await confirmDialog({
+      title: "删除附件？",
+      description: `将删除附件「${att.file_name}」，此操作无法撤销。`,
+      confirmText: "删除",
+      destructive: true,
+    });
+    if (!ok) return;
     await supabase.storage.from("vault-attachments").remove([att.file_path]);
     await supabase.from("item_attachments").delete().eq("id", att.id);
     setAttachments((a) => a.filter((x) => x.id !== att.id));
