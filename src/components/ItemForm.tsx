@@ -202,34 +202,22 @@ export function ItemForm({
             <Label>分类</Label>
             <div className="flex flex-wrap gap-2">
               {cats.map((c) => (
-                <div key={c.key} className="group inline-flex items-center">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      update("category", c.key);
-                      if (c.key !== values.category) setValues((s) => ({ ...s, category: c.key, extra: {} }));
-                    }}
-                    className={
-                      "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs " +
-                      (values.category === c.key
-                        ? "border-vault/60 bg-vault/10 text-vault"
-                        : "border-border bg-surface text-muted-foreground hover:text-foreground")
-                    }
-                  >
-                    <c.icon className="h-3.5 w-3.5" /> {c.label}
-                  </button>
-                  {!c.builtin && (
-                    <button
-                      type="button"
-                      onClick={() => deleteCustomCategory(c.key, c.label)}
-                      title="删除该自定义分类"
-                      className="ml-0.5 rounded-full p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                    >
-                      <Trash className="h-3 w-3" />
-                    </button>
-                  )}
-
-                </div>
+                <button
+                  key={c.key}
+                  type="button"
+                  onClick={() => {
+                    update("category", c.key);
+                    if (c.key !== values.category) setValues((s) => ({ ...s, category: c.key, extra: {} }));
+                  }}
+                  className={
+                    "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs " +
+                    (values.category === c.key
+                      ? "border-vault/60 bg-vault/10 text-vault"
+                      : "border-border bg-surface text-muted-foreground hover:text-foreground")
+                  }
+                >
+                  <c.icon className="h-3.5 w-3.5" /> {c.label}
+                </button>
               ))}
               <button
                 type="button"
