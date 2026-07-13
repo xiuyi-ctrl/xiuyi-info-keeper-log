@@ -47,7 +47,13 @@ function TrashPage() {
   }
 
   async function purge(id: string) {
-    if (!confirm("彻底删除后无法恢复，确定继续？")) return;
+    const ok = await confirmDialog({
+      title: "彻底删除？",
+      description: "彻底删除后无法恢复，确定继续？",
+      confirmText: "彻底删除",
+      destructive: true,
+    });
+    if (!ok) return;
     const { error } = await supabase.from("items").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("已彻底删除");
