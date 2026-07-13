@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, AlertTriangle, Download, Eye, Trash, ExternalLink } from "lucide-react";
+import { X, Plus, Upload, AlertTriangle, Download, Eye, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getAllCategories, addCustomCategory, removeCustomCategory,
+  getAllCategories, addCustomCategory,
   getCategory, DEFAULT_TAGS, MAX_CUSTOM_FIELDS,
   type Item, type FieldDef, type FieldType, type ItemAttachment,
 } from "@/lib/vault";
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export type ItemFormValues = {
   name: string;
