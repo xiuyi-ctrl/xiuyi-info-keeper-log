@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ItemForm, itemToForm, type ItemFormValues } from "@/components/ItemForm";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/items/$id")({
   component: ItemDetail,
