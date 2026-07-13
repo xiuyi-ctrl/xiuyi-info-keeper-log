@@ -1,7 +1,7 @@
 import { KeyRound, Flag, FileText, Folder } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-export type FieldType = "text" | "textarea" | "date" | "email" | "tel";
+export type FieldType = "text" | "textarea" | "date" | "email" | "tel" | "password";
 
 export type FieldDef = {
   key: string;
