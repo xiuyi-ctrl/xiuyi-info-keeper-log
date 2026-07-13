@@ -471,6 +471,7 @@ function NewCategoryDialog({
                   <option value="text">文本</option>
                   <option value="textarea">多行</option>
                   <option value="date">日期</option>
+                  <option value="password">密码</option>
                 </select>
                 <button type="button" onClick={() => setFields((s) => s.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
                   <X className="h-4 w-4" />
