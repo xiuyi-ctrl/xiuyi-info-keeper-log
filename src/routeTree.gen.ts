@@ -9,37 +9,37 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthRouteImport } from './routes/auth'
-import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedTrashRouteImport } from './routes/_authenticated/trash'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedTrashRouteImport } from './routes/_authenticated/trash'
 import { Route as AuthenticatedItemsIndexRouteImport } from './routes/_authenticated/items.index'
-import { Route as AuthenticatedItemsNewRouteImport } from './routes/_authenticated/items.new'
 import { Route as AuthenticatedItemsIdRouteImport } from './routes/_authenticated/items.$id'
+import { Route as AuthenticatedItemsNewRouteImport } from './routes/_authenticated/items.new'
 
-const AuthRoute = AuthRouteImport.update({
-  id: '/auth',
-  path: '/auth',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedTrashRoute = AuthenticatedTrashRouteImport.update({
-  id: '/trash',
-  path: '/trash',
-  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTrashRoute = AuthenticatedTrashRouteImport.update({
+  id: '/trash',
+  path: '/trash',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedItemsIndexRoute = AuthenticatedItemsIndexRouteImport.update({
@@ -47,14 +47,14 @@ const AuthenticatedItemsIndexRoute = AuthenticatedItemsIndexRouteImport.update({
   path: '/items/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedItemsNewRoute = AuthenticatedItemsNewRouteImport.update({
-  id: '/items/new',
-  path: '/items/new',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedItemsIdRoute = AuthenticatedItemsIdRouteImport.update({
   id: '/items/$id',
   path: '/items/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedItemsNewRoute = AuthenticatedItemsNewRouteImport.update({
+  id: '/items/new',
+  path: '/items/new',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
@@ -126,11 +126,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/auth': {
-      id: '/auth'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated': {
@@ -140,25 +140,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated/trash': {
-      id: '/_authenticated/trash'
-      path: '/trash'
-      fullPath: '/trash'
-      preLoaderRoute: typeof AuthenticatedTrashRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/trash': {
+      id: '/_authenticated/trash'
+      path: '/trash'
+      fullPath: '/trash'
+      preLoaderRoute: typeof AuthenticatedTrashRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/items/': {
@@ -168,18 +168,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedItemsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/items/new': {
-      id: '/_authenticated/items/new'
-      path: '/items/new'
-      fullPath: '/items/new'
-      preLoaderRoute: typeof AuthenticatedItemsNewRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/items/$id': {
       id: '/_authenticated/items/$id'
       path: '/items/$id'
       fullPath: '/items/$id'
       preLoaderRoute: typeof AuthenticatedItemsIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/items/new': {
+      id: '/_authenticated/items/new'
+      path: '/items/new'
+      fullPath: '/items/new'
+      preLoaderRoute: typeof AuthenticatedItemsNewRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
   }
@@ -212,3 +212,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
