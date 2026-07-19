@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Upload, AlertTriangle, Download, Eye, ExternalLink } from "lucide-react";
+import { X, Plus, Upload, AlertTriangle, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -12,6 +12,10 @@ import {
   type FieldType,
   type ItemAttachment,
 } from "@/lib/vault";
+import { formatBytes } from "@/lib/format";
+import { openAttachment, downloadAttachment } from "@/lib/attachments";
+import FileTypeIcon from "@/components/FileTypeIcon";
+import AttachmentPreview, { AttachmentPreviewLink } from "@/components/AttachmentPreview";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -198,27 +202,9 @@ export function ItemForm({
     toast.success("已删除附件");
   }
 
-  async function openAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage
-      .from("vault-attachments")
-      .createSignedUrl(att.file_path, 60 * 10);
-    if (error || !data) return toast.error("生成预览链接失败");
-    setPreviewAtt({ att, url: data.signedUrl });
-  }
-
-  async function downloadAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage
-      .from("vault-attachments")
-      .download(att.file_path);
-    if (error || !data) return toast.error("下载失败");
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = att.file_name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  async function handleOpenAttachment(att: ItemAttachment) {
+    const url = await openAttachment(att);
+    if (url) setPreviewAtt({ att, url });
   }
 
   return (
@@ -447,7 +433,7 @@ export function ItemForm({
                     <button
                       type="button"
                       title="预览"
-                      onClick={() => openAttachment(a)}
+                      onClick={() => handleOpenAttachment(a)}
                       className="rounded p-1 text-muted-foreground hover:text-vault"
                     >
                       <Eye className="h-4 w-4" />
@@ -497,16 +483,7 @@ export function ItemForm({
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 pr-8">
               <span className="truncate">{previewAtt?.att.file_name}</span>
-              {previewAtt && (
-                <a
-                  href={previewAtt.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-vault hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" /> 新标签
-                </a>
-              )}
+              {previewAtt && <AttachmentPreviewLink att={previewAtt.att} url={previewAtt.url} />}
             </DialogTitle>
           </DialogHeader>
           {previewAtt && <AttachmentPreview att={previewAtt.att} url={previewAtt.url} />}
@@ -638,61 +615,4 @@ function NewCategoryDialog({
       </DialogContent>
     </Dialog>
   );
-}
-
-function AttachmentPreview({ att, url }: { att: ItemAttachment; url: string }) {
-  const mime = att.mime_type ?? "";
-  if (mime.startsWith("image/")) {
-    return (
-      <img
-        src={url}
-        alt={att.file_name}
-        className="max-h-[70vh] w-full rounded-md object-contain"
-      />
-    );
-  }
-  if (mime === "application/pdf") {
-    return (
-      <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />
-    );
-  }
-  if (mime.startsWith("video/")) {
-    return <video src={url} controls className="max-h-[70vh] w-full rounded-md" />;
-  }
-  if (mime.startsWith("audio/")) {
-    return <audio src={url} controls className="w-full" />;
-  }
-  if (mime.startsWith("text/")) {
-    return (
-      <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />
-    );
-  }
-  return (
-    <div className="rounded-md bg-surface-elevated p-8 text-center text-sm text-muted-foreground">
-      该文件类型无法直接预览，请点击下载查看。
-    </div>
-  );
-}
-
-function FileTypeIcon({ mime }: { mime: string | null }) {
-  const m = mime ?? "";
-  let label = "FILE";
-  if (m.startsWith("image/")) label = "IMG";
-  else if (m === "application/pdf") label = "PDF";
-  else if (m.startsWith("video/")) label = "VID";
-  else if (m.startsWith("audio/")) label = "AUD";
-  else if (m.includes("word")) label = "DOC";
-  else if (m.includes("sheet") || m.includes("excel")) label = "XLS";
-  else if (m.includes("zip") || m.includes("compressed")) label = "ZIP";
-  return (
-    <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-vault/10 text-[10px] font-mono text-vault">
-      {label}
-    </span>
-  );
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }

@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import {
   getCategory,
@@ -15,6 +14,7 @@ import {
   type SnapshotWithAttachments,
   type ItemAttachment,
 } from "@/lib/vault";
+import { formatBytes, formatDT } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { confirmDialog } from "@/components/ConfirmDialog";
@@ -33,7 +33,7 @@ function ItemsList() {
   const [cats, setCats] = useState(getAllCategories());
 
   const { data: items = [], isLoading } = useQuery<Item[]>({
-    queryKey: ["items", "list"],
+    queryKey: ["items", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("items")
@@ -128,6 +128,7 @@ function ItemsList() {
       toast.info("当前筛选没有可导出的条目");
       return;
     }
+    const XLSX = await import("xlsx");
     const schema = getCategory(cat);
     // Fetch attachments for all items in view
     const ids = filtered.map((i) => i.id);
@@ -373,20 +374,6 @@ function ItemsList() {
       )}
     </div>
   );
-}
-
-function formatDT(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("zh-CN");
-  } catch {
-    return iso;
-  }
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function Chip({

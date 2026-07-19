@@ -13,7 +13,6 @@ import {
   X,
   Paperclip,
   Download,
-  ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -29,6 +28,10 @@ import {
   type SnapshotWithAttachments,
   type ItemAttachment,
 } from "@/lib/vault";
+import { formatBytes } from "@/lib/format";
+import { openAttachment, downloadAttachment } from "@/lib/attachments";
+import FileTypeIcon, { mimeToLabel } from "@/components/FileTypeIcon";
+import AttachmentPreview, { AttachmentPreviewLink } from "@/components/AttachmentPreview";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -169,27 +172,9 @@ function ItemDetail() {
     toast.success("已更新");
   }
 
-  async function openAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage
-      .from("vault-attachments")
-      .createSignedUrl(att.file_path, 60 * 10);
-    if (error || !data) return toast.error("生成预览链接失败");
-    setPreviewAtt({ att, url: data.signedUrl });
-  }
-
-  async function downloadAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage
-      .from("vault-attachments")
-      .download(att.file_path);
-    if (error || !data) return toast.error("下载失败");
-    const url = URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = att.file_name;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  async function handleOpenAttachment(att: ItemAttachment) {
+    const url = await openAttachment(att);
+    if (url) setPreviewAtt({ att, url });
   }
 
   const actionLabel: Record<string, string> = {
@@ -314,14 +299,14 @@ function ItemDetail() {
                     className="flex items-center gap-2 rounded bg-surface-elevated px-3 py-2 text-sm"
                   >
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-vault/10 text-[10px] font-mono text-vault">
-                      {mimeTag(a.mime_type)}
+                      {mimeToLabel(a.mime_type)}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate">{a.file_name}</div>
                       <div className="text-[10px] text-muted-foreground">{formatBytes(a.size)}</div>
                     </div>
                     <button
-                      onClick={() => openAttachment(a)}
+                      onClick={() => handleOpenAttachment(a)}
                       title="预览"
                       className="rounded p-1 text-muted-foreground hover:text-vault"
                     >
@@ -523,19 +508,10 @@ function ItemDetail() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 pr-8">
               <span className="truncate">{previewAtt?.att.file_name}</span>
-              {previewAtt && (
-                <a
-                  href={previewAtt.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-vault hover:underline"
-                >
-                  <ExternalLink className="h-3 w-3" /> 新标签
-                </a>
-              )}
+              {previewAtt && <AttachmentPreviewLink att={previewAtt.att} url={previewAtt.url} />}
             </DialogTitle>
           </DialogHeader>
-          {previewAtt && <AttPreview att={previewAtt.att} url={previewAtt.url} />}
+          {previewAtt && <AttachmentPreview att={previewAtt.att} url={previewAtt.url} />}
           <DialogFooter>
             {previewAtt && (
               <Button variant="outline" onClick={() => downloadAttachment(previewAtt.att)}>
@@ -547,51 +523,6 @@ function ItemDetail() {
       </Dialog>
     </div>
   );
-}
-
-function AttPreview({ att, url }: { att: ItemAttachment; url: string }) {
-  const mime = att.mime_type ?? "";
-  if (mime.startsWith("image/"))
-    return (
-      <img
-        src={url}
-        alt={att.file_name}
-        className="max-h-[70vh] w-full rounded-md object-contain"
-      />
-    );
-  if (mime === "application/pdf")
-    return (
-      <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />
-    );
-  if (mime.startsWith("video/"))
-    return <video src={url} controls className="max-h-[70vh] w-full rounded-md" />;
-  if (mime.startsWith("audio/")) return <audio src={url} controls className="w-full" />;
-  if (mime.startsWith("text/"))
-    return (
-      <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />
-    );
-  return (
-    <div className="rounded-md bg-surface-elevated p-8 text-center text-sm text-muted-foreground">
-      该文件类型无法直接预览，请下载查看。
-    </div>
-  );
-}
-
-function mimeTag(m: string | null): string {
-  const s = m ?? "";
-  if (s.startsWith("image/")) return "IMG";
-  if (s === "application/pdf") return "PDF";
-  if (s.startsWith("video/")) return "VID";
-  if (s.startsWith("audio/")) return "AUD";
-  if (s.includes("word")) return "DOC";
-  if (s.includes("sheet") || s.includes("excel")) return "XLS";
-  return "FILE";
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
 function FieldRow({
