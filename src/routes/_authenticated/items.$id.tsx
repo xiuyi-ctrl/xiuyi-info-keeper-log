@@ -15,7 +15,6 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getCategory,
   maskValue,
@@ -23,11 +22,18 @@ import {
   attachmentDiff,
   readField,
   FIELD_LABELS,
-  type Item,
   type HistoryEntry,
   type SnapshotWithAttachments,
-  type ItemAttachment,
 } from "@/lib/vault";
+import {
+  fetchItemById,
+  updateItem,
+  softDeleteItem,
+  fetchHistory,
+  deleteHistoryEntry as deleteHistoryEntryRepo,
+  fetchAttachments,
+} from "@/lib/repositories";
+import type { Item, ItemAttachment } from "@/lib/repositories";
 import { formatBytes } from "@/lib/format";
 import { openAttachment, downloadAttachment } from "@/lib/attachments";
 import FileTypeIcon, { mimeToLabel } from "@/components/FileTypeIcon";
@@ -60,36 +66,17 @@ function ItemDetail() {
 
   const { data: item, isLoading } = useQuery<Item | null>({
     queryKey: ["item", id],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("items").select("*").eq("id", id).maybeSingle();
-      if (error) throw error;
-      return data as Item | null;
-    },
+    queryFn: () => fetchItemById(id),
   });
 
   const { data: history = [] } = useQuery<HistoryEntry[]>({
     queryKey: ["history", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("item_history")
-        .select("*")
-        .eq("item_id", id)
-        .order("changed_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as HistoryEntry[];
-    },
+    queryFn: () => fetchHistory(id),
   });
 
   const { data: attachments = [] } = useQuery<ItemAttachment[]>({
     queryKey: ["attachments", id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("item_attachments")
-        .select("id,file_name,file_path,mime_type,size")
-        .eq("item_id", id);
-      if (error) throw error;
-      return (data ?? []) as ItemAttachment[];
-    },
+    queryFn: () => fetchAttachments(id),
   });
 
   if (isLoading) return <div className="py-16 text-center text-muted-foreground">加载中…</div>;
@@ -116,12 +103,10 @@ function ItemDetail() {
       destructive: true,
     });
     if (!ok) return;
-    const { error } = await supabase
-      .from("items")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await softDeleteItem(id);
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     qc.invalidateQueries({ queryKey: ["items"] });
@@ -129,7 +114,7 @@ function ItemDetail() {
     navigate({ to: "/items" });
   }
 
-  async function deleteHistoryEntry(h: HistoryEntry) {
+  async function handleDeleteHistoryEntry(h: HistoryEntry) {
     const ok = await confirmDialog({
       title: "删除该时间轴记录？",
       description: `将删除「${new Date(h.changed_at).toLocaleString("zh-CN")}」的历史快照，此操作无法撤销。`,
@@ -137,17 +122,20 @@ function ItemDetail() {
       destructive: true,
     });
     if (!ok) return;
-    const { error } = await supabase.from("item_history").delete().eq("id", h.id);
-    if (error) return toast.error(error.message);
+    try {
+      await deleteHistoryEntryRepo(h.id);
+    } catch (e) {
+      toast.error((e as Error).message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["history", id] });
     toast.success("已删除时间轴记录");
   }
 
   async function handleUpdate(v: ItemFormValues): Promise<void> {
     setSubmitting(true);
-    const { error } = await supabase
-      .from("items")
-      .update({
+    try {
+      await updateItem(id, {
         name: v.name.trim(),
         category: v.category,
         tags: v.tags,
@@ -157,13 +145,13 @@ function ItemDetail() {
         email: v.email || null,
         notes: v.notes || null,
         extra: v.extra ?? {},
-      })
-      .eq("id", id);
-    setSubmitting(false);
-    if (error) {
-      toast.error(error.message);
+      });
+    } catch (e) {
+      toast.error((e as Error).message);
+      setSubmitting(false);
       return;
     }
+    setSubmitting(false);
     qc.invalidateQueries({ queryKey: ["item", id] });
     qc.invalidateQueries({ queryKey: ["history", id] });
     qc.invalidateQueries({ queryKey: ["attachments", id] });
@@ -391,7 +379,7 @@ function ItemDetail() {
                     )}
                   </button>
                   <button
-                    onClick={() => deleteHistoryEntry(h)}
+                    onClick={() => handleDeleteHistoryEntry(h)}
                     title="删除该时间轴记录"
                     className="rounded-lg border border-border/60 bg-surface-elevated/40 px-2 text-muted-foreground opacity-0 transition-opacity hover:border-destructive/40 hover:text-destructive group-hover:opacity-100"
                   >

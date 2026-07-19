@@ -141,15 +141,25 @@ export function addCustomCategory(
   const list = readStoredCustom();
   list.push({ key, label: trimmed, extraFields: cleaned });
   writeStoredCustom(list);
+  invalidateCategoriesCache();
   return key;
 }
 
 export function removeCustomCategory(key: string) {
   writeStoredCustom(readStoredCustom().filter((c) => c.key !== key));
+  invalidateCategoriesCache();
 }
 
+let _categoriesCache: CategorySchema[] | null = null;
+
 export function getAllCategories(): CategorySchema[] {
-  return [...PRESET_CATEGORIES, ...getCustomCategories()];
+  if (_categoriesCache) return _categoriesCache;
+  _categoriesCache = [...PRESET_CATEGORIES, ...getCustomCategories()];
+  return _categoriesCache;
+}
+
+export function invalidateCategoriesCache() {
+  _categoriesCache = null;
 }
 
 export function getCategory(key: string): CategorySchema {

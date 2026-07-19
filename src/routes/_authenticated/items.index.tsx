@@ -3,17 +3,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import {
   getCategory,
   getAllCategories,
   maskValue,
   readField,
   removeCustomCategory,
-  type Item,
   type SnapshotWithAttachments,
-  type ItemAttachment,
 } from "@/lib/vault";
+import {
+  fetchActiveItems,
+  softDeleteItem,
+  bulkSoftDeleteByCategory,
+  fetchAttachmentsForExport,
+} from "@/lib/repositories";
+import type { Item, ItemAttachment } from "@/lib/repositories";
 import { formatBytes, formatDT } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -34,15 +38,7 @@ function ItemsList() {
 
   const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ["items", "all"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("items")
-        .select("*")
-        .is("deleted_at", null)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Item[];
-    },
+    queryFn: fetchActiveItems,
   });
 
   const allTags = useMemo(() => {
@@ -80,12 +76,10 @@ function ItemsList() {
       destructive: true,
     });
     if (!ok) return;
-    const { error } = await supabase
-      .from("items")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) {
-      toast.error(error.message);
+    try {
+      await softDeleteItem(id);
+    } catch (e) {
+      toast.error((e as Error).message);
       return;
     }
     qc.invalidateQueries({ queryKey: ["items"] });
@@ -105,12 +99,12 @@ function ItemsList() {
     });
     if (!ok) return;
     if (count > 0) {
-      const { error } = await supabase
-        .from("items")
-        .update({ deleted_at: new Date().toISOString() })
-        .eq("category", key)
-        .is("deleted_at", null);
-      if (error) return toast.error("删除失败", { description: error.message });
+      try {
+        await bulkSoftDeleteByCategory(key);
+      } catch (e) {
+        toast.error("删除失败", { description: (e as Error).message });
+        return;
+      }
     }
     removeCustomCategory(key);
     setCats(getAllCategories());
@@ -130,14 +124,10 @@ function ItemsList() {
     }
     const XLSX = await import("xlsx");
     const schema = getCategory(cat);
-    // Fetch attachments for all items in view
     const ids = filtered.map((i) => i.id);
-    const { data: attData } = await supabase
-      .from("item_attachments")
-      .select("id,item_id,file_name,file_path,mime_type,size")
-      .in("item_id", ids);
+    const attData = await fetchAttachmentsForExport(ids);
     const attMap = new Map<string, ItemAttachment[]>();
-    ((attData ?? []) as (ItemAttachment & { item_id: string })[]).forEach((a) => {
+    attData.forEach((a) => {
       const list = attMap.get(a.item_id) ?? [];
       list.push(a);
       attMap.set(a.item_id, list);

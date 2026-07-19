@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { createItem } from "@/lib/repositories";
 import { ItemForm, emptyForm, type ItemFormValues } from "@/components/ItemForm";
 
 export const Route = createFileRoute("/_authenticated/items/new")({
@@ -22,9 +23,8 @@ function NewItem() {
       setSubmitting(false);
       return;
     }
-    const { data, error } = await supabase
-      .from("items")
-      .insert({
+    try {
+      const id = await createItem({
         user_id: userData.user.id,
         name: v.name.trim(),
         category: v.category,
@@ -35,18 +35,15 @@ function NewItem() {
         email: v.email || null,
         notes: v.notes || null,
         extra: v.extra ?? {},
-      })
-      .select("id")
-      .single();
-
-    setSubmitting(false);
-    if (error) {
-      toast.error("保存失败", { description: error.message });
-      return;
+      });
+      qc.invalidateQueries({ queryKey: ["items"] });
+      toast.success("已保存");
+      navigate({ to: "/items/$id", params: { id } });
+    } catch (e) {
+      toast.error("保存失败", { description: (e as Error).message });
+    } finally {
+      setSubmitting(false);
     }
-    qc.invalidateQueries({ queryKey: ["items"] });
-    toast.success("已保存");
-    if (data) navigate({ to: "/items/$id", params: { id: data.id } });
   }
 
   return (

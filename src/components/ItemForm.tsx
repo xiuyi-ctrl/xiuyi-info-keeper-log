@@ -7,11 +7,11 @@ import {
   addCustomCategory,
   DEFAULT_TAGS,
   MAX_CUSTOM_FIELDS,
-  type Item,
   type FieldDef,
   type FieldType,
   type ItemAttachment,
 } from "@/lib/vault";
+import { fetchAttachments, uploadAttachment, deleteAttachment } from "@/lib/repositories";
 import { formatBytes } from "@/lib/format";
 import { openAttachment, downloadAttachment } from "@/lib/attachments";
 import FileTypeIcon from "@/components/FileTypeIcon";
@@ -94,11 +94,7 @@ export function ItemForm({
 
   useEffect(() => {
     if (!itemId) return;
-    supabase
-      .from("item_attachments")
-      .select("id,file_name,file_path,mime_type,size")
-      .eq("item_id", itemId)
-      .then(({ data }) => setAttachments((data as ItemAttachment[]) ?? []));
+    fetchAttachments(itemId).then(setAttachments);
   }, [itemId]);
 
   useEffect(() => {
@@ -156,30 +152,17 @@ export function ItemForm({
       }
 
       const path = `${userData.user.id}/${itemId}/${Date.now()}-${file.name}`;
-      const up = await supabase.storage.from("vault-attachments").upload(path, file);
-      if (up.error) {
-        toast.error(`上传「${file.name}」失败`, { description: up.error.message });
-        continue;
-      }
-
-      const ins = await supabase
-        .from("item_attachments")
-        .insert({
-          item_id: itemId,
-          user_id: userData.user.id,
-          file_name: file.name,
-          file_path: path,
-          size: file.size,
-          mime_type: file.type,
-        })
-        .select("id,file_name,file_path,mime_type,size")
-        .single();
-
-      if (ins.error) {
-        toast.error(ins.error.message);
-      } else if (ins.data) {
-        setAttachments((a) => [...a, ins.data as ItemAttachment]);
+      try {
+        const att = await uploadAttachment({
+          userId: userData.user.id,
+          itemId,
+          file,
+          path,
+        });
+        setAttachments((a) => [...a, att]);
         successCount++;
+      } catch (err) {
+        toast.error(`上传「${file.name}」失败`, { description: (err as Error).message });
       }
     }
 
@@ -196,8 +179,7 @@ export function ItemForm({
       destructive: true,
     });
     if (!ok) return;
-    await supabase.storage.from("vault-attachments").remove([att.file_path]);
-    await supabase.from("item_attachments").delete().eq("id", att.id);
+    await deleteAttachment(att);
     setAttachments((a) => a.filter((x) => x.id !== att.id));
     toast.success("已删除附件");
   }
@@ -224,6 +206,7 @@ export function ItemForm({
             <Input
               id="name"
               required
+              maxLength={100}
               value={values.name}
               onChange={(e) => update("name", e.target.value)}
             />
@@ -286,6 +269,7 @@ export function ItemForm({
             <div className="flex gap-1">
               <Input
                 placeholder="输入后回车"
+                maxLength={20}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {

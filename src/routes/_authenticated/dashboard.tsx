@@ -12,8 +12,9 @@ import {
   YAxis,
   CartesianGrid,
 } from "recharts";
-import { supabase } from "@/integrations/supabase/client";
-import { getCategory, getAllCategories, type Item } from "@/lib/vault";
+import { getCategory, getAllCategories } from "@/lib/vault";
+import { fetchActiveItemsByCategory } from "@/lib/repositories";
+import type { Item } from "@/lib/repositories";
 import { Database, Layers, Sparkles } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -23,15 +24,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 function Dashboard() {
   const { data: items = [] } = useQuery<Item[]>({
     queryKey: ["items", "all"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("items")
-        .select("*")
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Item[];
-    },
+    queryFn: fetchActiveItemsByCategory,
   });
 
   const total = items.length;
