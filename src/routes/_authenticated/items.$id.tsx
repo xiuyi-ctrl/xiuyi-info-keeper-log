@@ -1,15 +1,42 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ChevronLeft, Copy, Check, Eye, EyeOff, Trash2, History, Edit3, X, Paperclip, Download, ExternalLink } from "lucide-react";
+import {
+  ChevronLeft,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  Trash2,
+  History,
+  Edit3,
+  X,
+  Paperclip,
+  Download,
+  ExternalLink,
+} from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getCategory, maskValue, diffSnapshots, attachmentDiff, readField, FIELD_LABELS,
-  type Item, type HistoryEntry, type SnapshotWithAttachments, type ItemAttachment,
+  getCategory,
+  maskValue,
+  diffSnapshots,
+  attachmentDiff,
+  readField,
+  FIELD_LABELS,
+  type Item,
+  type HistoryEntry,
+  type SnapshotWithAttachments,
+  type ItemAttachment,
 } from "@/lib/vault";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { ItemForm, itemToForm, type ItemFormValues } from "@/components/ItemForm";
 import { confirmDialog } from "@/components/ConfirmDialog";
 
@@ -73,7 +100,9 @@ function ItemDetail() {
       setCopied(k);
       toast.success("已复制");
       setTimeout(() => setCopied(null), 1500);
-    } catch { toast.error("复制失败"); }
+    } catch {
+      toast.error("复制失败");
+    }
   }
 
   async function moveToTrash() {
@@ -84,8 +113,14 @@ function ItemDetail() {
       destructive: true,
     });
     if (!ok) return;
-    const { error } = await supabase.from("items").update({ deleted_at: new Date().toISOString() }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("items")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["items"] });
     toast.success("已移入回收站");
     navigate({ to: "/items" });
@@ -107,19 +142,25 @@ function ItemDetail() {
 
   async function handleUpdate(v: ItemFormValues): Promise<void> {
     setSubmitting(true);
-    const { error } = await supabase.from("items").update({
-      name: v.name.trim(),
-      category: v.category,
-      tags: v.tags,
-      account: v.account || null,
-      password_hint: v.password_hint || null,
-      phone: v.phone || null,
-      email: v.email || null,
-      notes: v.notes || null,
-      extra: v.extra ?? {},
-    }).eq("id", id);
+    const { error } = await supabase
+      .from("items")
+      .update({
+        name: v.name.trim(),
+        category: v.category,
+        tags: v.tags,
+        account: v.account || null,
+        password_hint: v.password_hint || null,
+        phone: v.phone || null,
+        email: v.email || null,
+        notes: v.notes || null,
+        extra: v.extra ?? {},
+      })
+      .eq("id", id);
     setSubmitting(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["item", id] });
     qc.invalidateQueries({ queryKey: ["history", id] });
     qc.invalidateQueries({ queryKey: ["attachments", id] });
@@ -129,13 +170,17 @@ function ItemDetail() {
   }
 
   async function openAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage.from("vault-attachments").createSignedUrl(att.file_path, 60 * 10);
+    const { data, error } = await supabase.storage
+      .from("vault-attachments")
+      .createSignedUrl(att.file_path, 60 * 10);
     if (error || !data) return toast.error("生成预览链接失败");
     setPreviewAtt({ att, url: data.signedUrl });
   }
 
   async function downloadAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage.from("vault-attachments").download(att.file_path);
+    const { data, error } = await supabase.storage
+      .from("vault-attachments")
+      .download(att.file_path);
     if (error || !data) return toast.error("下载失败");
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");
@@ -148,7 +193,10 @@ function ItemDetail() {
   }
 
   const actionLabel: Record<string, string> = {
-    create: "创建", update: "修改", delete: "移入回收站", restore: "还原",
+    create: "创建",
+    update: "修改",
+    delete: "移入回收站",
+    restore: "还原",
   };
   const actionColor: Record<string, string> = {
     create: "oklch(0.75 0.16 145)",
@@ -160,7 +208,10 @@ function ItemDetail() {
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="flex items-center justify-between">
-        <Link to="/items" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to="/items"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ChevronLeft className="h-4 w-4" /> 返回列表
         </Link>
         <div className="flex gap-2">
@@ -193,7 +244,10 @@ function ItemDetail() {
         <>
           <div className="panel-elevated p-6">
             <div className="flex items-start gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-xl" style={{ background: `${cat.color}22`, color: cat.color }}>
+              <div
+                className="grid h-14 w-14 place-items-center rounded-xl"
+                style={{ background: `${cat.color}22`, color: cat.color }}
+              >
                 <cat.icon className="h-7 w-7" />
               </div>
               <div className="min-w-0 flex-1">
@@ -201,7 +255,12 @@ function ItemDetail() {
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                   <span>{cat.label}</span>
                   {item.tags.map((t) => (
-                    <span key={t} className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground">#{t}</span>
+                    <span
+                      key={t}
+                      className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground"
+                    >
+                      #{t}
+                    </span>
                   ))}
                 </div>
               </div>
@@ -231,7 +290,9 @@ function ItemDetail() {
                   copied={copied}
                   onCopy={copyText}
                   masked={shouldMask && !reveal[f.key]}
-                  onToggle={shouldMask ? () => setReveal((r) => ({ ...r, [f.key]: !r[f.key] })) : undefined}
+                  onToggle={
+                    shouldMask ? () => setReveal((r) => ({ ...r, [f.key]: !r[f.key] })) : undefined
+                  }
                   hint={f.hint}
                 />
               );
@@ -248,7 +309,10 @@ function ItemDetail() {
             ) : (
               <ul className="space-y-1.5">
                 {attachments.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 rounded bg-surface-elevated px-3 py-2 text-sm">
+                  <li
+                    key={a.id}
+                    className="flex items-center gap-2 rounded bg-surface-elevated px-3 py-2 text-sm"
+                  >
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded bg-vault/10 text-[10px] font-mono text-vault">
                       {mimeTag(a.mime_type)}
                     </span>
@@ -256,10 +320,18 @@ function ItemDetail() {
                       <div className="truncate">{a.file_name}</div>
                       <div className="text-[10px] text-muted-foreground">{formatBytes(a.size)}</div>
                     </div>
-                    <button onClick={() => openAttachment(a)} title="预览" className="rounded p-1 text-muted-foreground hover:text-vault">
+                    <button
+                      onClick={() => openAttachment(a)}
+                      title="预览"
+                      className="rounded p-1 text-muted-foreground hover:text-vault"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button onClick={() => downloadAttachment(a)} title="下载" className="rounded p-1 text-muted-foreground hover:text-vault">
+                    <button
+                      onClick={() => downloadAttachment(a)}
+                      title="下载"
+                      className="rounded p-1 text-muted-foreground hover:text-vault"
+                    >
                       <Download className="h-4 w-4" />
                     </button>
                   </li>
@@ -294,7 +366,10 @@ function ItemDetail() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <span className="text-sm font-medium" style={{ color: actionColor[h.action] }}>
+                        <span
+                          className="text-sm font-medium"
+                          style={{ color: actionColor[h.action] }}
+                        >
                           {actionLabel[h.action] ?? h.action}
                         </span>
                         <span className="ml-2 text-xs text-muted-foreground">
@@ -310,7 +385,10 @@ function ItemDetail() {
                     {changed.size > 0 && (
                       <div className="mt-1 flex flex-wrap gap-1">
                         {Array.from(changed).map((f) => (
-                          <span key={f} className="rounded bg-vault/10 px-1.5 py-0.5 text-[10px] text-vault">
+                          <span
+                            key={f}
+                            className="rounded bg-vault/10 px-1.5 py-0.5 text-[10px] text-vault"
+                          >
                             {FIELD_LABELS[f] ?? f}
                           </span>
                         ))}
@@ -348,71 +426,95 @@ function ItemDetail() {
               快照 · {snapOpen && new Date(snapOpen.changed_at).toLocaleString("zh-CN")}
             </DialogTitle>
           </DialogHeader>
-          {snapOpen && (() => {
-            const idx = history.findIndex((h) => h.id === snapOpen.id);
-            const prev = history[idx + 1]?.snapshot ?? null;
-            const changed = diffSnapshots(prev, snapOpen.snapshot);
-            const { added, removed } = attachmentDiff(prev?.attachments, snapOpen.snapshot.attachments);
-            const snap = snapOpen.snapshot;
-            const schema = getCategory(snap.category);
-            const rows: [string, string, boolean][] = [
-              ["name", snap.name, changed.has("name")],
-              ["category", getCategory(snap.category).label, changed.has("category")],
-              ["tags", (snap.tags ?? []).join(", ") || "—", changed.has("tags")],
-              ...schema.fields.map<[string, string, boolean]>((f) => {
-                const val = readField(snap, f) || "—";
-                const isChanged = f.column ? changed.has(f.column) : changed.has("extra");
-                return [f.key, val, isChanged];
-              }),
-            ];
-            return (
-              <div className="space-y-2">
-                {rows.map(([k, v, isChanged]) => (
+          {snapOpen &&
+            (() => {
+              const idx = history.findIndex((h) => h.id === snapOpen.id);
+              const prev = history[idx + 1]?.snapshot ?? null;
+              const changed = diffSnapshots(prev, snapOpen.snapshot);
+              const { added, removed } = attachmentDiff(
+                prev?.attachments,
+                snapOpen.snapshot.attachments,
+              );
+              const snap = snapOpen.snapshot;
+              const schema = getCategory(snap.category);
+              const rows: [string, string, boolean][] = [
+                ["name", snap.name, changed.has("name")],
+                ["category", getCategory(snap.category).label, changed.has("category")],
+                ["tags", (snap.tags ?? []).join(", ") || "—", changed.has("tags")],
+                ...schema.fields.map<[string, string, boolean]>((f) => {
+                  const val = readField(snap, f) || "—";
+                  const isChanged = f.column ? changed.has(f.column) : changed.has("extra");
+                  return [f.key, val, isChanged];
+                }),
+              ];
+              return (
+                <div className="space-y-2">
+                  {rows.map(([k, v, isChanged]) => (
+                    <div
+                      key={k}
+                      className={
+                        "grid grid-cols-[9rem_1fr] gap-3 rounded-md px-3 py-2 text-sm " +
+                        (isChanged
+                          ? "bg-vault/10 border border-vault/30"
+                          : "bg-surface-elevated/40")
+                      }
+                    >
+                      <div className="text-xs text-muted-foreground">
+                        {FIELD_LABELS[k] ?? schema.fields.find((f) => f.key === k)?.label ?? k}
+                      </div>
+                      <div className="whitespace-pre-wrap break-words">{v}</div>
+                    </div>
+                  ))}
                   <div
-                    key={k}
                     className={
-                      "grid grid-cols-[9rem_1fr] gap-3 rounded-md px-3 py-2 text-sm " +
-                      (isChanged ? "bg-vault/10 border border-vault/30" : "bg-surface-elevated/40")
+                      "rounded-md px-3 py-2 text-sm " +
+                      (changed.has("attachments")
+                        ? "bg-vault/10 border border-vault/30"
+                        : "bg-surface-elevated/40")
                     }
                   >
-                    <div className="text-xs text-muted-foreground">
-                      {FIELD_LABELS[k] ?? schema.fields.find((f) => f.key === k)?.label ?? k}
-                    </div>
-                    <div className="whitespace-pre-wrap break-words">{v}</div>
-                  </div>
-                ))}
-                <div
-                  className={
-                    "rounded-md px-3 py-2 text-sm " +
-                    (changed.has("attachments") ? "bg-vault/10 border border-vault/30" : "bg-surface-elevated/40")
-                  }
-                >
-                  <div className="mb-1 text-xs text-muted-foreground">附件</div>
-                  <div className="space-y-1">
-                    {(snap.attachments ?? []).length === 0 && <div className="text-xs text-muted-foreground">（无）</div>}
-                    {(snap.attachments ?? []).map((a) => {
-                      const isNew = added.some((x) => x.id === a.id);
-                      return (
-                        <div key={a.id} className={"flex items-center gap-2 text-xs " + (isNew ? "text-green-300" : "")}>
+                    <div className="mb-1 text-xs text-muted-foreground">附件</div>
+                    <div className="space-y-1">
+                      {(snap.attachments ?? []).length === 0 && (
+                        <div className="text-xs text-muted-foreground">（无）</div>
+                      )}
+                      {(snap.attachments ?? []).map((a) => {
+                        const isNew = added.some((x) => x.id === a.id);
+                        return (
+                          <div
+                            key={a.id}
+                            className={
+                              "flex items-center gap-2 text-xs " + (isNew ? "text-green-300" : "")
+                            }
+                          >
+                            <Paperclip className="h-3 w-3" />
+                            <span className="truncate">{a.file_name}</span>
+                            {isNew && (
+                              <span className="rounded bg-green-500/15 px-1 py-0.5 text-[10px]">
+                                新增
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {removed.map((a) => (
+                        <div
+                          key={"r-" + a.id}
+                          className="flex items-center gap-2 text-xs text-red-300 line-through"
+                        >
                           <Paperclip className="h-3 w-3" />
                           <span className="truncate">{a.file_name}</span>
-                          {isNew && <span className="rounded bg-green-500/15 px-1 py-0.5 text-[10px]">新增</span>}
+                          <span className="rounded bg-red-500/15 px-1 py-0.5 text-[10px] no-underline">
+                            已移除
+                          </span>
                         </div>
-                      );
-                    })}
-                    {removed.map((a) => (
-                      <div key={"r-" + a.id} className="flex items-center gap-2 text-xs text-red-300 line-through">
-                        <Paperclip className="h-3 w-3" />
-                        <span className="truncate">{a.file_name}</span>
-                        <span className="rounded bg-red-500/15 px-1 py-0.5 text-[10px] no-underline">已移除</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
+                  {!prev && <p className="text-xs text-muted-foreground">这是首次创建的快照。</p>}
                 </div>
-                {!prev && <p className="text-xs text-muted-foreground">这是首次创建的快照。</p>}
-              </div>
-            );
-          })()}
+              );
+            })()}
         </DialogContent>
       </Dialog>
 
@@ -422,7 +524,12 @@ function ItemDetail() {
             <DialogTitle className="flex items-center gap-2 pr-8">
               <span className="truncate">{previewAtt?.att.file_name}</span>
               {previewAtt && (
-                <a href={previewAtt.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-vault hover:underline">
+                <a
+                  href={previewAtt.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-vault hover:underline"
+                >
                   <ExternalLink className="h-3 w-3" /> 新标签
                 </a>
               )}
@@ -444,12 +551,30 @@ function ItemDetail() {
 
 function AttPreview({ att, url }: { att: ItemAttachment; url: string }) {
   const mime = att.mime_type ?? "";
-  if (mime.startsWith("image/")) return <img src={url} alt={att.file_name} className="max-h-[70vh] w-full rounded-md object-contain" />;
-  if (mime === "application/pdf") return <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />;
-  if (mime.startsWith("video/")) return <video src={url} controls className="max-h-[70vh] w-full rounded-md" />;
+  if (mime.startsWith("image/"))
+    return (
+      <img
+        src={url}
+        alt={att.file_name}
+        className="max-h-[70vh] w-full rounded-md object-contain"
+      />
+    );
+  if (mime === "application/pdf")
+    return (
+      <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />
+    );
+  if (mime.startsWith("video/"))
+    return <video src={url} controls className="max-h-[70vh] w-full rounded-md" />;
   if (mime.startsWith("audio/")) return <audio src={url} controls className="w-full" />;
-  if (mime.startsWith("text/")) return <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />;
-  return <div className="rounded-md bg-surface-elevated p-8 text-center text-sm text-muted-foreground">该文件类型无法直接预览，请下载查看。</div>;
+  if (mime.startsWith("text/"))
+    return (
+      <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />
+    );
+  return (
+    <div className="rounded-md bg-surface-elevated p-8 text-center text-sm text-muted-foreground">
+      该文件类型无法直接预览，请下载查看。
+    </div>
+  );
 }
 
 function mimeTag(m: string | null): string {
@@ -470,7 +595,14 @@ function formatBytes(n: number): string {
 }
 
 function FieldRow({
-  label, value, k, copied, onCopy, masked, onToggle, hint,
+  label,
+  value,
+  k,
+  copied,
+  onCopy,
+  masked,
+  onToggle,
+  hint,
 }: {
   label: string;
   value: string | null;
@@ -488,15 +620,21 @@ function FieldRow({
         {label}
         {hint && <div className="text-[10px] opacity-70">{hint}</div>}
       </div>
-      <div className="flex-1 font-mono text-sm">
-        {masked ? maskValue(value) : value}
-      </div>
+      <div className="flex-1 font-mono text-sm">{masked ? maskValue(value) : value}</div>
       {onToggle && (
-        <button onClick={onToggle} className="text-muted-foreground hover:text-vault" title={masked ? "显示" : "隐藏"}>
+        <button
+          onClick={onToggle}
+          className="text-muted-foreground hover:text-vault"
+          title={masked ? "显示" : "隐藏"}
+        >
           {masked ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
         </button>
       )}
-      <button onClick={() => onCopy(k, value)} className="text-muted-foreground hover:text-vault" title="复制">
+      <button
+        onClick={() => onCopy(k, value)}
+        className="text-muted-foreground hover:text-vault"
+        title="复制"
+      >
         {copied === k ? <Check className="h-4 w-4 text-vault" /> : <Copy className="h-4 w-4" />}
       </button>
     </div>

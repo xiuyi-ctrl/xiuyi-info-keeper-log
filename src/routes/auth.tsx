@@ -68,13 +68,30 @@ function AuthPage() {
             <form onSubmit={handleSignIn} className="mt-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">邮箱</Label>
-                <Input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  id="email"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password">密码</Label>
-                <Input id="password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input
+                  id="password"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
-              <Button type="submit" disabled={loading} className="w-full gradient-accent-bg text-primary-foreground">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full gradient-accent-bg text-primary-foreground"
+              >
                 {loading ? "登录中…" : "登录"}
               </Button>
             </form>
@@ -84,13 +101,30 @@ function AuthPage() {
             <form onSubmit={handleSignUp} className="mt-6 space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email2">邮箱</Label>
-                <Input id="email2" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Input
+                  id="email2"
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="password2">密码（至少 6 位）</Label>
-                <Input id="password2" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <Input
+                  id="password2"
+                  type="password"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
               </div>
-              <Button type="submit" disabled={loading} className="w-full gradient-accent-bg text-primary-foreground">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="w-full gradient-accent-bg text-primary-foreground"
+              >
                 {loading ? "创建中…" : "创建保险箱"}
               </Button>
             </form>

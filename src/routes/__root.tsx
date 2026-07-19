@@ -21,9 +21,7 @@ function NotFoundComponent() {
       <div className="panel-elevated max-w-md p-10 text-center">
         <h1 className="text-6xl font-bold text-vault">404</h1>
         <h2 className="mt-4 text-xl font-semibold">页面不存在</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          你访问的保险箱格子似乎并不存在。
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">你访问的保险箱格子似乎并不存在。</p>
         <Link
           to="/"
           className="mt-6 inline-flex items-center justify-center rounded-md gradient-accent-bg px-5 py-2 text-sm font-medium text-primary-foreground"
@@ -85,14 +83,27 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:title", content: "我的信息保险箱 · 个人信息安全记录工具" },
       {
         property: "og:description",
-        content: "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
+        content:
+          "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "我的信息保险箱 · 个人信息安全记录工具" },
-      { name: "twitter:description", content: "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。" },
-      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6" },
-      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6" },
+      {
+        name: "twitter:description",
+        content:
+          "分类管理账号密码、证件、履历等敏感信息，带修改历程时间轴、脱敏开关、回收站与仪表盘统计。",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/5f8fc7d9-a18e-4b10-a6d7-cc18839b36d6",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

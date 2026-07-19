@@ -1,4 +1,5 @@
 <!-- LOVABLE:BEGIN -->
+
 > [!IMPORTANT]
 > This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
 > published git history — force pushing, or rebasing/amending/squashing commits
@@ -7,6 +8,7 @@
 >
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
+
 <!-- LOVABLE:END -->
 
 ## Stack
@@ -32,6 +34,7 @@ File-based via `src/routes/`. `routeTree.gen.ts` is auto-generated — never edi
 Root layout: `src/routes/__root.tsx`. Auth guard layout: `src/routes/_authenticated/route.tsx`.
 
 TanStack Start conventions (not Next.js):
+
 - Dynamic param: `$id` (not `{id}` or `[id]`)
 - Optional segment: `{-$category}`
 - Splat: `$.tsx`, read via `_splat`

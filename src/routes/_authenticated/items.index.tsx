@@ -6,8 +6,14 @@ import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getCategory, getAllCategories, maskValue, readField, removeCustomCategory,
-  type Item, type SnapshotWithAttachments, type ItemAttachment,
+  getCategory,
+  getAllCategories,
+  maskValue,
+  readField,
+  removeCustomCategory,
+  type Item,
+  type SnapshotWithAttachments,
+  type ItemAttachment,
 } from "@/lib/vault";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -51,10 +57,7 @@ function ItemsList() {
       if (cat !== "all" && i.category !== cat) return false;
       if (tag !== "all" && !(i.tags ?? []).includes(tag)) return false;
       if (!query) return true;
-      return (
-        i.name.toLowerCase().includes(query) ||
-        (i.notes ?? "").toLowerCase().includes(query)
-      );
+      return i.name.toLowerCase().includes(query) || (i.notes ?? "").toLowerCase().includes(query);
     });
   }, [items, q, cat, tag]);
 
@@ -67,6 +70,26 @@ function ItemsList() {
     } catch {
       toast.error("复制失败");
     }
+  }
+
+  async function moveToTrash(id: string, name: string) {
+    const ok = await confirmDialog({
+      title: "移入回收站？",
+      description: `将删除「${name}」，删除后可在回收站还原（7 天内有效）。`,
+      confirmText: "移入回收站",
+      destructive: true,
+    });
+    if (!ok) return;
+    const { error } = await supabase
+      .from("items")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    qc.invalidateQueries({ queryKey: ["items"] });
+    toast.success("已移入回收站");
   }
 
   async function deleteCustomCategory(key: string, label: string) {
@@ -120,23 +143,28 @@ function ItemsList() {
     });
 
     const headers = [
-      "名称", "分类", "标签",
+      "名称",
+      "分类",
+      "标签",
       ...schema.fields.map((f) => f.label),
-      "附件数量", "附件列表",
-      "创建时间", "更新时间",
+      "附件数量",
+      "附件列表",
+      "创建时间",
+      "更新时间",
     ];
     const rows = filtered.map((it) => {
       const atts = attMap.get(it.id) ?? [];
-      const base = [
-        it.name,
-        schema.label,
-        (it.tags ?? []).map((t) => "#" + t).join(" "),
-      ];
+      const base = [it.name, schema.label, (it.tags ?? []).map((t) => "#" + t).join(" ")];
       const dyn = schema.fields.map((f) => readField(it as SnapshotWithAttachments, f));
-      const attList = atts
-        .map((a) => `${a.file_name} (${formatBytes(a.size)})`)
-        .join("\n");
-      return [...base, ...dyn, atts.length, attList, formatDT(it.created_at), formatDT(it.updated_at)];
+      const attList = atts.map((a) => `${a.file_name} (${formatBytes(a.size)})`).join("\n");
+      return [
+        ...base,
+        ...dyn,
+        atts.length,
+        attList,
+        formatDT(it.created_at),
+        formatDT(it.updated_at),
+      ];
     });
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(50, h.length * 3)) }));
@@ -164,7 +192,9 @@ function ItemsList() {
             <FileSpreadsheet className="mr-1 h-4 w-4" /> 批量导出 Excel
           </Button>
           <Link to="/items/new">
-            <Button className="gradient-accent-bg text-primary-foreground"><Plus className="mr-1 h-4 w-4" /> 新建条目</Button>
+            <Button className="gradient-accent-bg text-primary-foreground">
+              <Plus className="mr-1 h-4 w-4" /> 新建条目
+            </Button>
           </Link>
         </div>
       </div>
@@ -180,7 +210,9 @@ function ItemsList() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Chip active={cat === "all"} onClick={() => setCat("all")}>全部分类</Chip>
+          <Chip active={cat === "all"} onClick={() => setCat("all")}>
+            全部分类
+          </Chip>
           {cats.map((c) => (
             <div key={c.key} className="group inline-flex items-center">
               <Chip active={cat === c.key} onClick={() => setCat(c.key)} color={c.color}>
@@ -201,9 +233,13 @@ function ItemsList() {
         </div>
         {allTags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            <Chip active={tag === "all"} onClick={() => setTag("all")}>全部标签</Chip>
+            <Chip active={tag === "all"} onClick={() => setTag("all")}>
+              全部标签
+            </Chip>
             {allTags.map((t) => (
-              <Chip key={t} active={tag === t} onClick={() => setTag(t)}>#{t}</Chip>
+              <Chip key={t} active={tag === t} onClick={() => setTag(t)}>
+                #{t}
+              </Chip>
             ))}
           </div>
         )}
@@ -219,7 +255,9 @@ function ItemsList() {
       ) : filtered.length === 0 ? (
         <div className="panel py-20 text-center">
           <p className="text-muted-foreground">没有匹配的记录</p>
-          <Link to="/items/new" className="mt-4 inline-block text-vault hover:underline">新建第一条 →</Link>
+          <Link to="/items/new" className="mt-4 inline-block text-vault hover:underline">
+            新建第一条 →
+          </Link>
         </div>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -230,10 +268,28 @@ function ItemsList() {
             const partyTime = isParty ? String((it.extra ?? {})["time"] ?? "") : "";
             const partyIntro = isParty ? String((it.extra ?? {})["introducer"] ?? "") : "";
             return (
-              <div key={it.id} className="panel group flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5">
+              <div
+                key={it.id}
+                className="panel group relative flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5"
+              >
+                <button
+                  type="button"
+                  onClick={() => moveToTrash(it.id, it.name)}
+                  title="删除"
+                  className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
                 <div className="flex items-start justify-between gap-3">
-                  <Link to="/items/$id" params={{ id: it.id }} className="flex min-w-0 flex-1 items-start gap-3">
-                    <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md" style={{ background: `${c.color}22`, color: c.color }}>
+                  <Link
+                    to="/items/$id"
+                    params={{ id: it.id }}
+                    className="flex min-w-0 flex-1 items-start gap-3"
+                  >
+                    <div
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
+                      style={{ background: `${c.color}22`, color: c.color }}
+                    >
                       <c.icon className="h-5 w-5" />
                     </div>
                     <div className="min-w-0 flex-1">
@@ -269,7 +325,11 @@ function ItemsList() {
                       className="text-muted-foreground hover:text-vault"
                       title="复制账号"
                     >
-                      {copied === it.id + "acc" ? <Check className="h-3.5 w-3.5 text-vault" /> : <Copy className="h-3.5 w-3.5" />}
+                      {copied === it.id + "acc" ? (
+                        <Check className="h-3.5 w-3.5 text-vault" />
+                      ) : (
+                        <Copy className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   </div>
                 )}
@@ -285,7 +345,11 @@ function ItemsList() {
                       className="text-muted-foreground hover:text-vault"
                       title={isRevealed ? "隐藏" : "显示"}
                     >
-                      {isRevealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+                      {isRevealed ? (
+                        <EyeOff className="h-3.5 w-3.5" />
+                      ) : (
+                        <Eye className="h-3.5 w-3.5" />
+                      )}
                     </button>
                   </div>
                 )}
@@ -293,7 +357,10 @@ function ItemsList() {
                 {it.tags && it.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {it.tags.map((t) => (
-                      <span key={t} className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground">
+                      <span
+                        key={t}
+                        className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground"
+                      >
                         #{t}
                       </span>
                     ))}
@@ -309,7 +376,11 @@ function ItemsList() {
 }
 
 function formatDT(iso: string): string {
-  try { return new Date(iso).toLocaleString("zh-CN"); } catch { return iso; }
+  try {
+    return new Date(iso).toLocaleString("zh-CN");
+  } catch {
+    return iso;
+  }
 }
 
 function formatBytes(n: number): string {
@@ -318,7 +389,17 @@ function formatBytes(n: number): string {
   return `${(n / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function Chip({ children, active, onClick, color }: { children: React.ReactNode; active?: boolean; onClick?: () => void; color?: string }) {
+function Chip({
+  children,
+  active,
+  onClick,
+  color,
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  color?: string;
+}) {
   return (
     <button
       onClick={onClick}
@@ -328,7 +409,9 @@ function Chip({ children, active, onClick, color }: { children: React.ReactNode;
           ? "border-vault/60 bg-vault/10 text-vault"
           : "border-border bg-surface text-muted-foreground hover:text-foreground")
       }
-      style={active && color ? { borderColor: color + "80", color, background: color + "18" } : undefined}
+      style={
+        active && color ? { borderColor: color + "80", color, background: color + "18" } : undefined
+      }
     >
       {children}
     </button>

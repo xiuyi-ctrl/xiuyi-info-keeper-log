@@ -3,15 +3,26 @@ import { X, Plus, Upload, AlertTriangle, Download, Eye, ExternalLink } from "luc
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  getAllCategories, addCustomCategory,
-  getCategory, DEFAULT_TAGS, MAX_CUSTOM_FIELDS,
-  type Item, type FieldDef, type FieldType, type ItemAttachment,
+  getAllCategories,
+  addCustomCategory,
+  DEFAULT_TAGS,
+  MAX_CUSTOM_FIELDS,
+  type Item,
+  type FieldDef,
+  type FieldType,
+  type ItemAttachment,
 } from "@/lib/vault";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { confirmDialog } from "@/components/ConfirmDialog";
 
 export type ItemFormValues = {
@@ -69,13 +80,13 @@ export function ItemForm({
   submitting: boolean;
   submitLabel: string;
 }) {
-
   const [values, setValues] = useState<ItemFormValues>(initial);
   const [tagInput, setTagInput] = useState("");
-  const [cats, setCats] = useState(getAllCategories());
+  const [cats, setCats] = useState(() => getAllCategories());
   const [attachments, setAttachments] = useState<ItemAttachment[]>([]);
   const [previewAtt, setPreviewAtt] = useState<{ att: ItemAttachment; url: string } | null>(null);
   const [showCatDialog, setShowCatDialog] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (!itemId) return;
@@ -86,7 +97,11 @@ export function ItemForm({
       .then(({ data }) => setAttachments((data as ItemAttachment[]) ?? []));
   }, [itemId]);
 
-  const currentSchema = getCategory(values.category);
+  useEffect(() => {
+    setCats(getAllCategories());
+  }, [showCatDialog]);
+
+  const currentSchema = cats.find((c) => c.key === values.category) ?? cats[cats.length - 1];
 
   function update<K extends keyof ItemFormValues>(k: K, v: ItemFormValues[K]) {
     setValues((s) => ({ ...s, [k]: v }));
@@ -103,11 +118,6 @@ export function ItemForm({
     if (f.column) return values[f.column] ?? "";
     return values.extra[f.key] ?? "";
   }
-
-
-
-
-
 
   function addTag(t?: string) {
     const raw = (t ?? tagInput).trim().replace(/^#/, "");
@@ -126,32 +136,51 @@ export function ItemForm({
   }
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file || !itemId) return;
-    if (file.size > 10 * 1024 * 1024) return toast.error("文件超过 10MB");
+    const files = e.target.files;
+    if (!files || files.length === 0 || !itemId) return;
 
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return;
-    const path = `${userData.user.id}/${itemId}/${Date.now()}-${file.name}`;
-    const up = await supabase.storage.from("vault-attachments").upload(path, file);
-    if (up.error) return toast.error("上传失败", { description: up.error.message });
 
-    const ins = await supabase
-      .from("item_attachments")
-      .insert({
-        item_id: itemId,
-        user_id: userData.user.id,
-        file_name: file.name,
-        file_path: path,
-        size: file.size,
-        mime_type: file.type,
-      })
-      .select("id,file_name,file_path,mime_type,size")
-      .single();
+    setUploading(true);
+    let successCount = 0;
 
-    if (ins.error) return toast.error(ins.error.message);
-    if (ins.data) setAttachments((a) => [...a, ins.data as ItemAttachment]);
-    toast.success("附件已上传");
+    for (const file of Array.from(files)) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`文件「${file.name}」超过 10MB，已跳过`);
+        continue;
+      }
+
+      const path = `${userData.user.id}/${itemId}/${Date.now()}-${file.name}`;
+      const up = await supabase.storage.from("vault-attachments").upload(path, file);
+      if (up.error) {
+        toast.error(`上传「${file.name}」失败`, { description: up.error.message });
+        continue;
+      }
+
+      const ins = await supabase
+        .from("item_attachments")
+        .insert({
+          item_id: itemId,
+          user_id: userData.user.id,
+          file_name: file.name,
+          file_path: path,
+          size: file.size,
+          mime_type: file.type,
+        })
+        .select("id,file_name,file_path,mime_type,size")
+        .single();
+
+      if (ins.error) {
+        toast.error(ins.error.message);
+      } else if (ins.data) {
+        setAttachments((a) => [...a, ins.data as ItemAttachment]);
+        successCount++;
+      }
+    }
+
+    setUploading(false);
+    if (successCount > 0) toast.success(`已上传 ${successCount} 个附件`);
     e.target.value = "";
   }
 
@@ -170,13 +199,17 @@ export function ItemForm({
   }
 
   async function openAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage.from("vault-attachments").createSignedUrl(att.file_path, 60 * 10);
+    const { data, error } = await supabase.storage
+      .from("vault-attachments")
+      .createSignedUrl(att.file_path, 60 * 10);
     if (error || !data) return toast.error("生成预览链接失败");
     setPreviewAtt({ att, url: data.signedUrl });
   }
 
   async function downloadAttachment(att: ItemAttachment) {
-    const { data, error } = await supabase.storage.from("vault-attachments").download(att.file_path);
+    const { data, error } = await supabase.storage
+      .from("vault-attachments")
+      .download(att.file_path);
     if (error || !data) return toast.error("下载失败");
     const url = URL.createObjectURL(data);
     const a = document.createElement("a");
@@ -202,7 +235,12 @@ export function ItemForm({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="name">名称 *</Label>
-            <Input id="name" required value={values.name} onChange={(e) => update("name", e.target.value)} />
+            <Input
+              id="name"
+              required
+              value={values.name}
+              onChange={(e) => update("name", e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>分类</Label>
@@ -213,7 +251,8 @@ export function ItemForm({
                   type="button"
                   onClick={() => {
                     update("category", c.key);
-                    if (c.key !== values.category) setValues((s) => ({ ...s, category: c.key, extra: {} }));
+                    if (c.key !== values.category)
+                      setValues((s) => ({ ...s, category: c.key, extra: {} }));
                   }}
                   className={
                     "inline-flex items-center gap-1 rounded-full border px-3 py-1 text-xs " +
@@ -240,9 +279,20 @@ export function ItemForm({
           <Label>二级标签</Label>
           <div className="flex flex-wrap items-center gap-2">
             {values.tags.map((t) => (
-              <span key={t} className="inline-flex items-center gap-1 rounded bg-accent/40 px-2 py-1 text-xs">
+              <span
+                key={t}
+                className="inline-flex items-center gap-1 rounded bg-accent/40 px-2 py-1 text-xs"
+              >
                 #{t}
-                <button type="button" onClick={() => update("tags", values.tags.filter((x) => x !== t))}>
+                <button
+                  type="button"
+                  onClick={() =>
+                    update(
+                      "tags",
+                      values.tags.filter((x) => x !== t),
+                    )
+                  }
+                >
                   <X className="h-3 w-3" />
                 </button>
               </span>
@@ -273,9 +323,14 @@ export function ItemForm({
                 <button
                   key={t}
                   type="button"
-                  onClick={() => active
-                    ? update("tags", values.tags.filter((x) => x !== t))
-                    : addTag(t)}
+                  onClick={() =>
+                    active
+                      ? update(
+                          "tags",
+                          values.tags.filter((x) => x !== t),
+                        )
+                      : addTag(t)
+                  }
                   className={
                     "rounded-full border px-2 py-0.5 " +
                     (active
@@ -294,37 +349,52 @@ export function ItemForm({
       <div className="panel p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">详细字段</h3>
-          <span className="text-xs text-muted-foreground">{currentSchema.label} · {currentSchema.fields.length} 项</span>
+          <span className="text-xs text-muted-foreground">
+            {currentSchema.label} · {currentSchema.fields.length} 项
+          </span>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {currentSchema.fields.filter((f) => f.type !== "textarea").map((f) => (
+          {currentSchema.fields
+            .filter((f) => f.type !== "textarea")
+            .map((f) => (
+              <div key={f.key} className="space-y-2">
+                <Label htmlFor={f.key}>
+                  {f.label}
+                  {f.hint && <span className="ml-2 text-xs text-muted-foreground">{f.hint}</span>}
+                </Label>
+                <Input
+                  id={f.key}
+                  type={
+                    f.type === "date"
+                      ? "date"
+                      : f.type === "email"
+                        ? "email"
+                        : f.type === "tel"
+                          ? "tel"
+                          : f.type === "password"
+                            ? "password"
+                            : "text"
+                  }
+                  autoComplete={f.type === "password" ? "new-password" : undefined}
+                  value={getFieldValue(f)}
+                  onChange={(e) => setFieldValue(f, e.target.value)}
+                />
+              </div>
+            ))}
+        </div>
+        {currentSchema.fields
+          .filter((f) => f.type === "textarea")
+          .map((f) => (
             <div key={f.key} className="space-y-2">
-              <Label htmlFor={f.key}>
-                {f.label}
-                {f.hint && <span className="ml-2 text-xs text-muted-foreground">{f.hint}</span>}
-              </Label>
-              <Input
+              <Label htmlFor={f.key}>{f.label}</Label>
+              <Textarea
                 id={f.key}
-                type={
-                  f.type === "date" ? "date"
-                  : f.type === "email" ? "email"
-                  : f.type === "tel" ? "tel"
-                  : f.type === "password" ? "password"
-                  : "text"
-                }
-                autoComplete={f.type === "password" ? "new-password" : undefined}
+                rows={4}
                 value={getFieldValue(f)}
                 onChange={(e) => setFieldValue(f, e.target.value)}
               />
             </div>
           ))}
-        </div>
-        {currentSchema.fields.filter((f) => f.type === "textarea").map((f) => (
-          <div key={f.key} className="space-y-2">
-            <Label htmlFor={f.key}>{f.label}</Label>
-            <Textarea id={f.key} rows={4} value={getFieldValue(f)} onChange={(e) => setFieldValue(f, e.target.value)} />
-          </div>
-        ))}
       </div>
 
       <div className="panel p-6 space-y-3">
@@ -338,28 +408,64 @@ export function ItemForm({
         ) : (
           <>
             <div className="flex items-center gap-2">
-              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm hover:bg-surface-elevated">
-                <Upload className="h-4 w-4" /> 上传附件
-                <input type="file" className="hidden" onChange={handleFileUpload} />
+              <label
+                className={
+                  "inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm hover:bg-surface-elevated" +
+                  (uploading ? " pointer-events-none opacity-60" : "")
+                }
+              >
+                {uploading ? (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                {uploading ? "上传中…" : "上传附件"}
+                <input
+                  type="file"
+                  className="hidden"
+                  multiple
+                  onChange={handleFileUpload}
+                  disabled={uploading}
+                />
               </label>
-              <span className="text-xs text-muted-foreground">单个 ≤ 10MB · 支持图片 / PDF / 文档等</span>
+              <span className="text-xs text-muted-foreground">
+                支持多选 · 单个 ≤ 10MB · 图片 / PDF / 文档等
+              </span>
             </div>
             {attachments.length > 0 && (
               <ul className="space-y-1.5">
                 {attachments.map((a) => (
-                  <li key={a.id} className="flex items-center gap-2 rounded bg-surface-elevated px-3 py-2 text-sm">
+                  <li
+                    key={a.id}
+                    className="flex items-center gap-2 rounded bg-surface-elevated px-3 py-2 text-sm"
+                  >
                     <FileTypeIcon mime={a.mime_type} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate">{a.file_name}</div>
                       <div className="text-[10px] text-muted-foreground">{formatBytes(a.size)}</div>
                     </div>
-                    <button type="button" title="预览" onClick={() => openAttachment(a)} className="rounded p-1 text-muted-foreground hover:text-vault">
+                    <button
+                      type="button"
+                      title="预览"
+                      onClick={() => openAttachment(a)}
+                      className="rounded p-1 text-muted-foreground hover:text-vault"
+                    >
                       <Eye className="h-4 w-4" />
                     </button>
-                    <button type="button" title="下载" onClick={() => downloadAttachment(a)} className="rounded p-1 text-muted-foreground hover:text-vault">
+                    <button
+                      type="button"
+                      title="下载"
+                      onClick={() => downloadAttachment(a)}
+                      className="rounded p-1 text-muted-foreground hover:text-vault"
+                    >
                       <Download className="h-4 w-4" />
                     </button>
-                    <button type="button" title="删除" onClick={() => removeAttachment(a)} className="rounded p-1 text-muted-foreground hover:text-destructive">
+                    <button
+                      type="button"
+                      title="删除"
+                      onClick={() => removeAttachment(a)}
+                      className="rounded p-1 text-muted-foreground hover:text-destructive"
+                    >
                       <X className="h-4 w-4" />
                     </button>
                   </li>
@@ -371,12 +477,20 @@ export function ItemForm({
       </div>
 
       <div className="flex justify-end gap-2">
-        <Button type="submit" disabled={submitting} className="gradient-accent-bg text-primary-foreground">
+        <Button
+          type="submit"
+          disabled={submitting}
+          className="gradient-accent-bg text-primary-foreground"
+        >
           {submitting ? "保存中…" : submitLabel}
         </Button>
       </div>
 
-      <NewCategoryDialog open={showCatDialog} onOpenChange={setShowCatDialog} onCreated={handleCategoryCreated} />
+      <NewCategoryDialog
+        open={showCatDialog}
+        onOpenChange={setShowCatDialog}
+        onCreated={handleCategoryCreated}
+      />
 
       <Dialog open={!!previewAtt} onOpenChange={(o) => !o && setPreviewAtt(null)}>
         <DialogContent className="max-w-3xl">
@@ -410,7 +524,9 @@ export function ItemForm({
 }
 
 function NewCategoryDialog({
-  open, onOpenChange, onCreated,
+  open,
+  onOpenChange,
+  onCreated,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -420,8 +536,12 @@ function NewCategoryDialog({
   const [fields, setFields] = useState<{ key: string; label: string; type: FieldType }[]>([]);
 
   function addField() {
-    if (fields.length >= MAX_CUSTOM_FIELDS) return toast.error(`最多 ${MAX_CUSTOM_FIELDS} 个自定义字段`);
-    setFields((s) => [...s, { key: `f_${Date.now().toString(36)}_${s.length}`, label: "", type: "text" }]);
+    if (fields.length >= MAX_CUSTOM_FIELDS)
+      return toast.error(`最多 ${MAX_CUSTOM_FIELDS} 个自定义字段`);
+    setFields((s) => [
+      ...s,
+      { key: `f_${Date.now().toString(36)}_${s.length}`, label: "", type: "text" },
+    ]);
   }
 
   function save() {
@@ -446,26 +566,46 @@ function NewCategoryDialog({
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>分类名称</Label>
-            <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="例：车辆信息 / 保险单" />
+            <Input
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="例：车辆信息 / 保险单"
+            />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label>自定义字段 <span className="text-xs text-muted-foreground">最多 {MAX_CUSTOM_FIELDS} 个，备注字段自动包含</span></Label>
+              <Label>
+                自定义字段{" "}
+                <span className="text-xs text-muted-foreground">
+                  最多 {MAX_CUSTOM_FIELDS} 个，备注字段自动包含
+                </span>
+              </Label>
               <Button type="button" size="sm" variant="outline" onClick={addField}>
                 <Plus className="mr-1 h-3 w-3" /> 添加字段
               </Button>
             </div>
             {fields.map((f, i) => (
-              <div key={f.key} className="flex items-center gap-2 rounded-md bg-surface-elevated p-2">
+              <div
+                key={f.key}
+                className="flex items-center gap-2 rounded-md bg-surface-elevated p-2"
+              >
                 <Input
                   placeholder={`字段名 ${i + 1}`}
                   value={f.label}
-                  onChange={(e) => setFields((s) => s.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
+                  onChange={(e) =>
+                    setFields((s) =>
+                      s.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)),
+                    )
+                  }
                   className="h-8 flex-1"
                 />
                 <select
                   value={f.type}
-                  onChange={(e) => setFields((s) => s.map((x, j) => j === i ? { ...x, type: e.target.value as FieldType } : x))}
+                  onChange={(e) =>
+                    setFields((s) =>
+                      s.map((x, j) => (j === i ? { ...x, type: e.target.value as FieldType } : x)),
+                    )
+                  }
                   className="h-8 rounded-md border border-border bg-surface px-2 text-xs"
                 >
                   <option value="text">文本</option>
@@ -473,7 +613,11 @@ function NewCategoryDialog({
                   <option value="date">日期</option>
                   <option value="password">密码</option>
                 </select>
-                <button type="button" onClick={() => setFields((s) => s.filter((_, j) => j !== i))} className="text-muted-foreground hover:text-destructive">
+                <button
+                  type="button"
+                  onClick={() => setFields((s) => s.filter((_, j) => j !== i))}
+                  className="text-muted-foreground hover:text-destructive"
+                >
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -484,8 +628,12 @@ function NewCategoryDialog({
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>取消</Button>
-          <Button onClick={save} className="gradient-accent-bg text-primary-foreground">保存分类</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            取消
+          </Button>
+          <Button onClick={save} className="gradient-accent-bg text-primary-foreground">
+            保存分类
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -495,10 +643,18 @@ function NewCategoryDialog({
 function AttachmentPreview({ att, url }: { att: ItemAttachment; url: string }) {
   const mime = att.mime_type ?? "";
   if (mime.startsWith("image/")) {
-    return <img src={url} alt={att.file_name} className="max-h-[70vh] w-full rounded-md object-contain" />;
+    return (
+      <img
+        src={url}
+        alt={att.file_name}
+        className="max-h-[70vh] w-full rounded-md object-contain"
+      />
+    );
   }
   if (mime === "application/pdf") {
-    return <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />;
+    return (
+      <iframe src={url} title={att.file_name} className="h-[70vh] w-full rounded-md bg-white" />
+    );
   }
   if (mime.startsWith("video/")) {
     return <video src={url} controls className="max-h-[70vh] w-full rounded-md" />;
@@ -507,7 +663,9 @@ function AttachmentPreview({ att, url }: { att: ItemAttachment; url: string }) {
     return <audio src={url} controls className="w-full" />;
   }
   if (mime.startsWith("text/")) {
-    return <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />;
+    return (
+      <iframe src={url} title={att.file_name} className="h-[60vh] w-full rounded-md bg-white" />
+    );
   }
   return (
     <div className="rounded-md bg-surface-elevated p-8 text-center text-sm text-muted-foreground">
@@ -532,9 +690,6 @@ function FileTypeIcon({ mime }: { mime: string | null }) {
     </span>
   );
 }
-
-
-
 
 function formatBytes(n: number): string {
   if (n < 1024) return `${n} B`;

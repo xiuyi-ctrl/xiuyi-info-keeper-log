@@ -12,7 +12,11 @@ export const Route = createFileRoute("/")({
 });
 
 const features = [
-  { icon: Shield, title: "分类 + 二级标签", desc: "预设 7 大分类可扩展；每条记录支持多标签，快速筛选。" },
+  {
+    icon: Shield,
+    title: "分类 + 二级标签",
+    desc: "预设 7 大分类可扩展；每条记录支持多标签，快速筛选。",
+  },
   { icon: Clock, title: "修改历程时间轴", desc: "每次改动自动留存完整快照，可对比历史差异。" },
   { icon: Eye, title: "脱敏开关", desc: "敏感字段默认打码，点眼睛才显示，肩膀上有人也不怕。" },
   { icon: Tag, title: "全局秒搜", desc: "名称与备注模糊搜索，跨分类瞬间定位。" },
@@ -50,8 +54,8 @@ function Landing() {
           </span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          账号、证件、银行卡、履历、社交账号——分类归档，一处管理。
-          每一次修改都留痕，删除还可后悔 7 天。
+          账号、证件、银行卡、履历、社交账号——分类归档，一处管理。 每一次修改都留痕，删除还可后悔 7
+          天。
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link

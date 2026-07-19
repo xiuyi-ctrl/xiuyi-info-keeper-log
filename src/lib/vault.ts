@@ -1,4 +1,4 @@
-import { KeyRound, Flag, FileText, Folder } from "lucide-react";
+import { KeyRound, Flag, FileText, Folder, FileUp } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export type FieldType = "text" | "textarea" | "date" | "email" | "tel" | "password";
@@ -24,7 +24,14 @@ export type CategorySchema = {
 
 const ACCOUNT_FIELDS: FieldDef[] = [
   { key: "account", label: "账号 / 用户名", type: "text", column: "account" },
-  { key: "password_hint", label: "密码提示词", type: "text", column: "password_hint", hint: "非明文，仅提示", masked: true },
+  {
+    key: "password_hint",
+    label: "密码提示词",
+    type: "text",
+    column: "password_hint",
+    hint: "非明文，仅提示",
+    masked: true,
+  },
   { key: "phone", label: "绑定手机号", type: "tel", column: "phone" },
   { key: "email", label: "绑定邮箱", type: "email", column: "email" },
   { key: "notes", label: "备注", type: "textarea", column: "notes" },
@@ -41,10 +48,44 @@ const OTHER_FIELDS: FieldDef[] = [
   { key: "notes", label: "备注", type: "textarea", column: "notes" },
 ];
 
+const FILE_FIELDS: FieldDef[] = [
+  { key: "time", label: "时间", type: "date" },
+  { key: "notes", label: "备注", type: "textarea", column: "notes" },
+];
+
 export const PRESET_CATEGORIES: CategorySchema[] = [
-  { key: "account", label: "账号密码", icon: KeyRound, color: "oklch(0.78 0.14 185)", fields: ACCOUNT_FIELDS, builtin: true },
-  { key: "party", label: "入党入团", icon: Flag, color: "oklch(0.72 0.19 340)", fields: PARTY_FIELDS, builtin: true },
-  { key: "other", label: "其他", icon: FileText, color: "oklch(0.70 0.02 250)", fields: OTHER_FIELDS, builtin: true },
+  {
+    key: "account",
+    label: "账号密码",
+    icon: KeyRound,
+    color: "oklch(0.78 0.14 185)",
+    fields: ACCOUNT_FIELDS,
+    builtin: true,
+  },
+  {
+    key: "party",
+    label: "入党入团",
+    icon: Flag,
+    color: "oklch(0.72 0.19 340)",
+    fields: PARTY_FIELDS,
+    builtin: true,
+  },
+  {
+    key: "file",
+    label: "文件",
+    icon: FileUp,
+    color: "oklch(0.75 0.15 260)",
+    fields: FILE_FIELDS,
+    builtin: true,
+  },
+  {
+    key: "other",
+    label: "其他",
+    icon: FileText,
+    color: "oklch(0.70 0.02 250)",
+    fields: OTHER_FIELDS,
+    builtin: true,
+  },
 ];
 
 export const DEFAULT_TAGS = ["常用", "重要"];
@@ -87,12 +128,16 @@ export function getCustomCategories(): CategorySchema[] {
   }));
 }
 
-export function addCustomCategory(label: string, extraFields: { key: string; label: string; type: FieldType }[]): string {
+export function addCustomCategory(
+  label: string,
+  extraFields: { key: string; label: string; type: FieldType }[],
+): string {
   const trimmed = label.trim();
   const existing = getAllCategories().find((c) => c.label === trimmed);
   if (existing) throw new Error("分类名已存在，请换一个");
   const cleaned = extraFields.filter((f) => f.label.trim()).slice(0, MAX_CUSTOM_FIELDS);
-  const key = "custom_" + trimmed.replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
+  const key =
+    "custom_" + trimmed.replace(/\s+/g, "_").toLowerCase() + "_" + Date.now().toString(36);
   const list = readStoredCustom();
   list.push({ key, label: trimmed, extraFields: cleaned });
   writeStoredCustom(list);
@@ -108,7 +153,9 @@ export function getAllCategories(): CategorySchema[] {
 }
 
 export function getCategory(key: string): CategorySchema {
-  return getAllCategories().find((c) => c.key === key) ?? PRESET_CATEGORIES[PRESET_CATEGORIES.length - 1];
+  return (
+    getAllCategories().find((c) => c.key === key) ?? PRESET_CATEGORIES[PRESET_CATEGORIES.length - 1]
+  );
 }
 
 export type ItemAttachment = {
@@ -171,7 +218,10 @@ export function readField(item: SnapshotWithAttachments, f: FieldDef): string {
   return v == null ? "" : String(v);
 }
 
-export function attachmentDiff(prev: ItemAttachment[] | undefined, curr: ItemAttachment[] | undefined) {
+export function attachmentDiff(
+  prev: ItemAttachment[] | undefined,
+  curr: ItemAttachment[] | undefined,
+) {
   const p = prev ?? [];
   const c = curr ?? [];
   const pIds = new Set(p.map((a) => a.id));
@@ -181,10 +231,24 @@ export function attachmentDiff(prev: ItemAttachment[] | undefined, curr: ItemAtt
   return { added, removed };
 }
 
-export function diffSnapshots(prev: SnapshotWithAttachments | null, curr: SnapshotWithAttachments): Set<string> {
+export function diffSnapshots(
+  prev: SnapshotWithAttachments | null,
+  curr: SnapshotWithAttachments,
+): Set<string> {
   const changed = new Set<string>();
   if (!prev) return changed;
-  const keys: (keyof Item)[] = ["name", "category", "tags", "account", "password_hint", "phone", "email", "notes", "deleted_at", "extra"];
+  const keys: (keyof Item)[] = [
+    "name",
+    "category",
+    "tags",
+    "account",
+    "password_hint",
+    "phone",
+    "email",
+    "notes",
+    "deleted_at",
+    "extra",
+  ];
   for (const k of keys) {
     if (JSON.stringify(prev[k]) !== JSON.stringify(curr[k])) changed.add(k as string);
   }

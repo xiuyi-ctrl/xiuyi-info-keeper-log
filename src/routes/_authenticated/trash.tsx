@@ -80,7 +80,10 @@ function TrashPage() {
             const days = daysRemainingInTrash(it.deleted_at!);
             return (
               <div key={it.id} className="panel flex items-center gap-3 p-4">
-                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-md" style={{ background: `${c.color}22`, color: c.color }}>
+                <div
+                  className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
+                  style={{ background: `${c.color}22`, color: c.color }}
+                >
                   <c.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">

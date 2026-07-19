@@ -1,6 +1,17 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { getCategory, getAllCategories, type Item } from "@/lib/vault";
 import { Database, Layers, Sparkles } from "lucide-react";
@@ -26,7 +37,12 @@ function Dashboard() {
   const total = items.length;
   const cats = getAllCategories();
   const byCat = cats
-    .map((c) => ({ name: c.label, key: c.key, value: items.filter((i) => i.category === c.key).length, color: c.color }))
+    .map((c) => ({
+      name: c.label,
+      key: c.key,
+      value: items.filter((i) => i.category === c.key).length,
+      color: c.color,
+    }))
     .filter((c) => c.value > 0);
 
   // Last 7 days series
@@ -76,22 +92,40 @@ function Dashboard() {
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={byCat} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} innerRadius={50} paddingAngle={2}>
-                    {byCat.map((c, i) => <Cell key={i} fill={c.color} />)}
+                  <Pie
+                    data={byCat}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={90}
+                    innerRadius={50}
+                    paddingAngle={2}
+                  >
+                    {byCat.map((c, i) => (
+                      <Cell key={i} fill={c.color} />
+                    ))}
                   </Pie>
                   <Tooltip
-                    contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "#ffffff" }}
+                    contentStyle={{
+                      background: "var(--surface-elevated)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      color: "#ffffff",
+                    }}
                     itemStyle={{ color: "#ffffff" }}
                     labelStyle={{ color: "#ffffff" }}
                   />
-
                 </PieChart>
               </ResponsiveContainer>
             </div>
           )}
           <div className="mt-4 flex flex-wrap gap-2">
             {byCat.map((c) => (
-              <div key={c.key} className="flex items-center gap-1.5 rounded-md bg-surface-elevated px-2 py-1 text-xs">
+              <div
+                key={c.key}
+                className="flex items-center gap-1.5 rounded-md bg-surface-elevated px-2 py-1 text-xs"
+              >
                 <span className="h-2 w-2 rounded-full" style={{ background: c.color }} />
                 {c.name} · {c.value}
               </div>
@@ -108,13 +142,30 @@ function Dashboard() {
                 <XAxis dataKey="day" stroke="var(--muted-foreground)" fontSize={12} />
                 <YAxis stroke="var(--muted-foreground)" fontSize={12} allowDecimals={false} />
                 <Tooltip
-                  contentStyle={{ background: "var(--surface-elevated)", border: "1px solid var(--border)", borderRadius: 8, color: "#ffffff" }}
+                  contentStyle={{
+                    background: "var(--surface-elevated)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    color: "#ffffff",
+                  }}
                   itemStyle={{ color: "#ffffff" }}
                   labelStyle={{ color: "#ffffff" }}
                 />
 
-                <Line type="monotone" dataKey="新增" stroke="var(--vault)" strokeWidth={2} dot={{ r: 3 }} />
-                <Line type="monotone" dataKey="修改" stroke="oklch(0.68 0.18 265)" strokeWidth={2} dot={{ r: 3 }} />
+                <Line
+                  type="monotone"
+                  dataKey="新增"
+                  stroke="var(--vault)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="修改"
+                  stroke="oklch(0.68 0.18 265)"
+                  strokeWidth={2}
+                  dot={{ r: 3 }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -124,11 +175,16 @@ function Dashboard() {
       <div className="panel p-6">
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-lg font-semibold">最近条目</h3>
-          <Link to="/items" className="text-sm text-vault hover:underline">查看全部 →</Link>
+          <Link to="/items" className="text-sm text-vault hover:underline">
+            查看全部 →
+          </Link>
         </div>
         {items.length === 0 ? (
           <div className="py-12 text-center text-muted-foreground">
-            还没有任何记录，<Link to="/items/new" className="text-vault">立即新建</Link>
+            还没有任何记录，
+            <Link to="/items/new" className="text-vault">
+              立即新建
+            </Link>
           </div>
         ) : (
           <div className="grid gap-2 md:grid-cols-2">
@@ -141,7 +197,10 @@ function Dashboard() {
                   params={{ id: it.id }}
                   className="flex items-center gap-3 rounded-lg border border-border/60 bg-surface-elevated/40 p-3 hover:bg-surface-elevated"
                 >
-                  <div className="grid h-9 w-9 place-items-center rounded-md" style={{ background: `${c.color}22`, color: c.color }}>
+                  <div
+                    className="grid h-9 w-9 place-items-center rounded-md"
+                    style={{ background: `${c.color}22`, color: c.color }}
+                  >
                     <c.icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
@@ -158,7 +217,17 @@ function Dashboard() {
   );
 }
 
-function StatCard({ icon: Icon, label, value, accent }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; accent: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  accent,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  value: number;
+  accent: string;
+}) {
   return (
     <div className="panel p-5">
       <div className="flex items-center justify-between">
@@ -174,7 +243,9 @@ function EmptyChart({ label, cta, to }: { label: string; cta: string; to: string
   return (
     <div className="flex h-64 flex-col items-center justify-center text-sm text-muted-foreground">
       {label}
-      <Link to={to} className="mt-2 text-vault hover:underline">{cta} →</Link>
+      <Link to={to} className="mt-2 text-vault hover:underline">
+        {cta} →
+      </Link>
     </div>
   );
 }

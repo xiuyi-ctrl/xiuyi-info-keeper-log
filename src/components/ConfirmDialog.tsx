@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 
 export type ConfirmOptions = {
@@ -17,7 +24,8 @@ let externalTrigger: ((o: ConfirmOptions) => Promise<boolean>) | null = null;
 
 export function confirmDialog(opts: ConfirmOptions): Promise<boolean> {
   if (externalTrigger) return externalTrigger(opts);
-  if (typeof window !== "undefined") return Promise.resolve(window.confirm(opts.description ?? opts.title ?? ""));
+  if (typeof window !== "undefined")
+    return Promise.resolve(window.confirm(opts.description ?? opts.title ?? ""));
   return Promise.resolve(false);
 }
 
@@ -25,8 +33,7 @@ export function ConfirmDialogRoot() {
   const [pending, setPending] = useState<PendingState | null>(null);
 
   useEffect(() => {
-    externalTrigger = (opts) =>
-      new Promise<boolean>((resolve) => setPending({ opts, resolve }));
+    externalTrigger = (opts) => new Promise<boolean>((resolve) => setPending({ opts, resolve }));
     return () => {
       externalTrigger = null;
     };

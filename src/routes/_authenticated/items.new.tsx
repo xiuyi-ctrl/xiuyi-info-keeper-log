@@ -40,7 +40,10 @@ function NewItem() {
       .single();
 
     setSubmitting(false);
-    if (error) { toast.error("保存失败", { description: error.message }); return; }
+    if (error) {
+      toast.error("保存失败", { description: error.message });
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["items"] });
     toast.success("已保存");
     if (data) navigate({ to: "/items/$id", params: { id: data.id } });
@@ -48,11 +51,19 @@ function NewItem() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link to="/items" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to="/items"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ChevronLeft className="h-4 w-4" /> 返回列表
       </Link>
       <h1 className="text-3xl font-bold">新建条目</h1>
-      <ItemForm initial={emptyForm} onSubmit={handleSubmit} submitting={submitting} submitLabel="保存" />
+      <ItemForm
+        initial={emptyForm}
+        onSubmit={handleSubmit}
+        submitting={submitting}
+        submitLabel="保存"
+      />
     </div>
   );
 }
