@@ -10,6 +10,7 @@ import {
   Plus,
   FileSpreadsheet,
   Trash2,
+  Pencil,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import {
   readField,
   removeCustomCategory,
   type SnapshotWithAttachments,
+  type CategorySchema,
 } from "@/lib/vault";
 import {
   fetchActiveItems,
@@ -35,6 +37,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { confirmDialog } from "@/components/ConfirmDialog";
+import { EditCategoryDialog } from "@/components/EditCategoryDialog";
 
 export const Route = createFileRoute("/_authenticated/items/")({
   component: ItemsList,
@@ -50,6 +53,7 @@ function ItemsList() {
   const [page, setPage] = useState(0);
   const [cats, setCats] = useState(getAllCategories());
   const { copied, copy } = useCopyToClipboard();
+  const [editingCat, setEditingCat] = useState<CategorySchema | null>(null);
 
   const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ["items", "all"],
@@ -234,14 +238,24 @@ function ItemsList() {
                 <c.icon className="mr-1 h-3.5 w-3.5" /> {c.label}
               </Chip>
               {!c.builtin && (
-                <button
-                  type="button"
-                  onClick={() => deleteCustomCategory(c.key, c.label)}
-                  title="删除该自定义分类"
-                  className="ml-0.5 rounded-full p-1 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-3 w-3" />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={() => setEditingCat(c)}
+                    title="编辑该分类"
+                    className="ml-0.5 rounded-full p-1 text-muted-foreground hover:text-vault"
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteCustomCategory(c.key, c.label)}
+                    title="删除该自定义分类"
+                    className="ml-0.5 rounded-full p-1 text-muted-foreground hover:text-destructive"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                </>
               )}
             </div>
           ))}
@@ -312,6 +326,14 @@ function ItemsList() {
           )}
         </>
       )}
+      <EditCategoryDialog
+        open={editingCat !== null}
+        onOpenChange={(o) => {
+          if (!o) setEditingCat(null);
+        }}
+        category={editingCat}
+        onUpdated={() => setCats(getAllCategories())}
+      />
     </div>
   );
 }
@@ -332,6 +354,20 @@ const ItemCard = memo(function ItemCard({
   const isParty = item.category === "party";
   const partyTime = isParty ? String((item.extra ?? {})["time"] ?? "") : "";
   const partyIntro = isParty ? String((item.extra ?? {})["introducer"] ?? "") : "";
+
+  const previewFields = useMemo(() => {
+    if (c.builtin) return [];
+    return c.fields
+      .filter((f) => f.key !== "notes" && f.column !== "notes")
+      .slice(0, 2)
+      .map((f) => ({
+        label: f.label,
+        value: f.column
+          ? String((item as Record<string, unknown>)[f.column] ?? "")
+          : String((item.extra ?? {})[f.key] ?? ""),
+      }))
+      .filter((f) => f.value);
+  }, [c, item]);
 
   return (
     <div className="panel group relative flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5">
@@ -413,8 +449,18 @@ const ItemCard = memo(function ItemCard({
         </div>
       )}
 
+      {previewFields.map((f) => (
+        <div
+          key={f.label}
+          className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm"
+        >
+          <span className="text-xs text-muted-foreground shrink-0">{f.label}</span>
+          <span className="flex-1 truncate text-xs">{f.value}</span>
+        </div>
+      ))}
+
       {item.tags && item.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1">
+        <div className="mt-auto flex flex-wrap gap-1 pt-1">
           {item.tags.map((t) => (
             <span
               key={t}

@@ -145,6 +145,24 @@ export function addCustomCategory(
   return key;
 }
 
+export function updateCustomCategory(
+  key: string,
+  label: string,
+  extraFields: { key: string; label: string; type: FieldType }[],
+) {
+  const trimmed = label.trim();
+  const list = readStoredCustom();
+  const existing = list.find((c) => c.key === key);
+  if (!existing) throw new Error("分类不存在");
+  const duplicate = list.find((c) => c.key !== key && c.label === trimmed);
+  if (duplicate) throw new Error("分类名已存在，请换一个");
+  const cleaned = extraFields.filter((f) => f.label.trim()).slice(0, MAX_CUSTOM_FIELDS);
+  existing.label = trimmed;
+  existing.extraFields = cleaned;
+  writeStoredCustom(list);
+  invalidateCategoriesCache();
+}
+
 export function removeCustomCategory(key: string) {
   writeStoredCustom(readStoredCustom().filter((c) => c.key !== key));
   invalidateCategoriesCache();

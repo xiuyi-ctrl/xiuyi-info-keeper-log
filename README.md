@@ -17,14 +17,14 @@
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 框架 | TanStack Start + TanStack Router + TanStack Query |
-| UI | React 19 · shadcn/ui (new-york) · Tailwind CSS v4 · Recharts · Lucide |
-| 数据库 | MySQL (mysql2/promise) |
-| 认证 | JWT (jsonwebtoken + bcryptjs) |
-| 构建 | Vite 8 · Nitro · TypeScript |
-| 导出 | SheetJS (xlsx) |
+| 层级   | 技术                                                                  |
+| ------ | --------------------------------------------------------------------- |
+| 框架   | TanStack Start + TanStack Router + TanStack Query                     |
+| UI     | React 19 · shadcn/ui (new-york) · Tailwind CSS v4 · Recharts · Lucide |
+| 数据库 | MySQL (mysql2/promise)                                                |
+| 认证   | JWT (jsonwebtoken + bcryptjs)                                         |
+| 构建   | Vite 8 · Nitro · TypeScript                                           |
+| 导出   | SheetJS (xlsx)                                                        |
 
 ## 快速开始
 
