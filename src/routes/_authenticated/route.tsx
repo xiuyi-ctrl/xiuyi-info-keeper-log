@@ -7,16 +7,27 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { Shield, LayoutDashboard, KeyRound, Trash2, LogOut, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getCurrentUserFn } from "@/actions/auth";
+import { getStoredToken, clearAuth } from "@/lib/client-auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error || !data.user) throw redirect({ to: "/auth" });
-    return { user: data.user };
+    const token = getStoredToken();
+    if (!token) throw redirect({ to: "/auth" });
+    try {
+      const user = await getCurrentUserFn();
+      if (!user) {
+        clearAuth();
+        throw redirect({ to: "/auth" });
+      }
+      return { user };
+    } catch (err) {
+      console.error("beforeLoad auth check failed", err);
+      throw redirect({ to: "/auth" });
+    }
   },
   component: AppShell,
 });
@@ -25,8 +36,8 @@ function AppShell() {
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  function signOut() {
+    clearAuth();
     toast.success("已退出");
     navigate({ to: "/auth", replace: true });
   }

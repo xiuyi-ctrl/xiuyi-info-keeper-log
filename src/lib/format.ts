@@ -5,9 +5,7 @@ export function formatBytes(n: number): string {
 }
 
 export function formatDT(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("zh-CN");
-  } catch {
-    return iso;
-  }
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleString("zh-CN");
 }

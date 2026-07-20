@@ -133,56 +133,61 @@ function ItemsList() {
   }
 
   async function exportExcel() {
-    if (cat === "all") {
-      toast.info("请先选择一个具体分类再导出");
-      return;
-    }
-    if (filtered.length === 0) {
-      toast.info("当前筛选没有可导出的条目");
-      return;
-    }
-    const XLSX = await import("xlsx");
-    const schema = getCategory(cat);
-    const ids = filtered.map((i) => i.id);
-    const attData = await fetchAttachmentsForExport(ids);
-    const attMap = new Map<string, ItemAttachment[]>();
-    attData.forEach((a) => {
-      const list = attMap.get(a.item_id) ?? [];
-      list.push(a);
-      attMap.set(a.item_id, list);
-    });
+    try {
+      if (cat === "all") {
+        toast.info("请先选择一个具体分类再导出");
+        return;
+      }
+      if (filtered.length === 0) {
+        toast.info("当前筛选没有可导出的条目");
+        return;
+      }
+      const XLSX = await import("xlsx");
+      const schema = getCategory(cat);
+      const ids = filtered.map((i) => i.id);
+      const attData = await fetchAttachmentsForExport(ids);
+      const attMap = new Map<string, ItemAttachment[]>();
+      attData.forEach((a) => {
+        const list = attMap.get(a.item_id) ?? [];
+        list.push(a);
+        attMap.set(a.item_id, list);
+      });
 
-    const headers = [
-      "名称",
-      "分类",
-      "标签",
-      ...schema.fields.map((f) => f.label),
-      "附件数量",
-      "附件列表",
-      "创建时间",
-      "更新时间",
-    ];
-    const rows = filtered.map((it) => {
-      const atts = attMap.get(it.id) ?? [];
-      const base = [it.name, schema.label, (it.tags ?? []).map((t) => "#" + t).join(" ")];
-      const dyn = schema.fields.map((f) => readField(it as SnapshotWithAttachments, f));
-      const attList = atts.map((a) => `${a.file_name} (${formatBytes(a.size)})`).join("\n");
-      return [
-        ...base,
-        ...dyn,
-        atts.length,
-        attList,
-        formatDT(it.created_at),
-        formatDT(it.updated_at),
+      const headers = [
+        "名称",
+        "分类",
+        "标签",
+        ...schema.fields.map((f) => f.label),
+        "附件数量",
+        "附件列表",
+        "创建时间",
+        "更新时间",
       ];
-    });
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(50, h.length * 3)) }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, schema.label.slice(0, 30));
-    const stamp = new Date().toISOString().slice(0, 10);
-    XLSX.writeFile(wb, `信息保险箱_${schema.label}_${stamp}.xlsx`);
-    toast.success(`已导出 ${filtered.length} 条 ${schema.label}`);
+      const rows = filtered.map((it) => {
+        const atts = attMap.get(it.id) ?? [];
+        const base = [it.name, schema.label, (it.tags ?? []).map((t) => "#" + t).join(" ")];
+        const dyn = schema.fields.map((f) => readField(it as SnapshotWithAttachments, f));
+        const attList = atts.map((a) => `${a.file_name} (${formatBytes(a.size)})`).join("\n");
+        return [
+          ...base,
+          ...dyn,
+          atts.length,
+          attList,
+          formatDT(it.created_at),
+          formatDT(it.updated_at),
+        ];
+      });
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      ws["!cols"] = headers.map((h) => ({ wch: Math.max(12, Math.min(50, h.length * 3)) }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, schema.label.slice(0, 30));
+      const stamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `信息保险箱_${schema.label}_${stamp}.xlsx`);
+      toast.success(`已导出 ${filtered.length} 条 ${schema.label}`);
+    } catch (err) {
+      console.error("导出失败", err);
+      toast.error("导出失败，请稍后重试");
+    }
   }
 
   return (

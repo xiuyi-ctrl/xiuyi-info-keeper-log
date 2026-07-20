@@ -2,11 +2,12 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { Shield } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { loginFn, registerFn } from "@/actions/auth";
+import { storeAuth, getStoredToken } from "@/lib/client-auth";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -14,54 +15,44 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [signInEmail, setSignInEmail] = useState("");
+  const [signInPassword, setSignInPassword] = useState("");
+  const [signUpEmail, setSignUpEmail] = useState("");
+  const [signUpPassword, setSignUpPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function translateError(msg: string): string {
-    const map: Record<string, string> = {
-      "Invalid login credentials": "邮箱或密码错误",
-      "Email not confirmed": "邮箱尚未验证，请先点击验证链接",
-      "User already registered": "该邮箱已注册",
-      "Password should be at least 6 characters": "密码至少需要 6 个字符",
-      "Signup requires a valid password": "注册需要有效密码",
-      "Unable to validate email address: invalid format": "邮箱格式不正确",
-      "Email address is invalid": "邮箱格式不正确",
-      "For security purposes, you can only request this once every 60 seconds":
-        "出于安全限制，60 秒内只能重试一次",
-      "New password should be different from the old password": "新密码不能与旧密码相同",
-    };
-    return map[msg] ?? msg;
-  }
-
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate({ to: "/dashboard", replace: true });
-    });
+    if (getStoredToken()) navigate({ to: "/dashboard", replace: true });
   }, [navigate]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (error) return toast.error("登录失败", { description: translateError(error.message) });
-    toast.success("欢迎回来");
-    navigate({ to: "/dashboard", replace: true });
+    try {
+      const result = await loginFn({ data: { email: signInEmail, password: signInPassword } });
+      storeAuth(result.token, result.user);
+      toast.success("欢迎回来");
+      navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      toast.error("登录失败", { description: (err as Error).message });
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function handleSignUp(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: window.location.origin },
-    });
-    setLoading(false);
-    if (error) return toast.error("注册失败", { description: translateError(error.message) });
-    toast.success("注册成功，正在登录…");
-    navigate({ to: "/dashboard", replace: true });
+    try {
+      const result = await registerFn({ data: { email: signUpEmail, password: signUpPassword } });
+      storeAuth(result.token, result.user);
+      toast.success("注册成功");
+      navigate({ to: "/dashboard", replace: true });
+    } catch (err) {
+      toast.error("注册失败", { description: (err as Error).message });
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -88,8 +79,8 @@ function AuthPage() {
                   id="email"
                   type="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={signInEmail}
+                  onChange={(e) => setSignInEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -99,8 +90,8 @@ function AuthPage() {
                   type="password"
                   required
                   minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={signInPassword}
+                  onChange={(e) => setSignInPassword(e.target.value)}
                 />
               </div>
               <Button
@@ -121,8 +112,8 @@ function AuthPage() {
                   id="email2"
                   type="email"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={signUpEmail}
+                  onChange={(e) => setSignUpEmail(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
@@ -132,8 +123,8 @@ function AuthPage() {
                   type="password"
                   required
                   minLength={6}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={signUpPassword}
+                  onChange={(e) => setSignUpPassword(e.target.value)}
                 />
               </div>
               <Button
@@ -148,7 +139,7 @@ function AuthPage() {
         </Tabs>
 
         <p className="mt-6 text-center text-xs text-muted-foreground">
-          你的数据仅自己可见，采用行级安全隔离。
+          你的数据仅自己可见，采用端到端数据隔离。
         </p>
       </div>
     </div>

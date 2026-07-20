@@ -3,9 +3,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
 import { createItem } from "@/lib/repositories";
 import { ItemForm, emptyForm, type ItemFormValues } from "@/components/ItemForm";
+import { getStoredUser } from "@/lib/client-auth";
 
 export const Route = createFileRoute("/_authenticated/items/new")({
   component: NewItem,
@@ -18,14 +18,15 @@ function NewItem() {
 
   async function handleSubmit(v: ItemFormValues): Promise<void> {
     setSubmitting(true);
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) {
+    const user = getStoredUser();
+    if (!user) {
       setSubmitting(false);
+      toast.error("未登录");
       return;
     }
     try {
       const id = await createItem({
-        user_id: userData.user.id,
+        user_id: user.id,
         name: v.name.trim(),
         category: v.category,
         tags: v.tags,

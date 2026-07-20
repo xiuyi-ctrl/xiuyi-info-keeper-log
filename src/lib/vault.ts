@@ -163,9 +163,12 @@ export function invalidateCategoriesCache() {
 }
 
 export function getCategory(key: string): CategorySchema {
-  return (
-    getAllCategories().find((c) => c.key === key) ?? PRESET_CATEGORIES[PRESET_CATEGORIES.length - 1]
-  );
+  const found = getAllCategories().find((c) => c.key === key);
+  if (!found) {
+    console.warn(`getCategory: 未找到 key "${key}"，使用默认分类`);
+    return PRESET_CATEGORIES[PRESET_CATEGORIES.length - 1];
+  }
+  return found;
 }
 
 export type ItemAttachment = {

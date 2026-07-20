@@ -1,12 +1,11 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Shield, Clock, Trash2, BarChart3, KeyRound, Tags } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getStoredToken } from "@/lib/client-auth";
 
 export const Route = createFileRoute("/")({
   beforeLoad: async () => {
     if (typeof window === "undefined") return;
-    const { data } = await supabase.auth.getSession();
-    if (data.session) throw redirect({ to: "/dashboard" });
+    if (getStoredToken()) throw redirect({ to: "/dashboard" });
   },
   component: Landing,
 });

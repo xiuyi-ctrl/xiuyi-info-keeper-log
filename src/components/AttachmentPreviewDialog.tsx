@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +21,15 @@ export function AttachmentPreviewDialog({
   previewAtt: PreviewAtt;
   setPreviewAtt: (v: PreviewAtt) => void;
 }) {
+  const prevUrlRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (prevUrlRef.current && prevUrlRef.current !== previewAtt?.url) {
+      URL.revokeObjectURL(prevUrlRef.current);
+    }
+    prevUrlRef.current = previewAtt?.url ?? null;
+  }, [previewAtt]);
+
   return (
     <Dialog open={!!previewAtt} onOpenChange={(o) => !o && setPreviewAtt(null)}>
       <DialogContent className="max-w-3xl">

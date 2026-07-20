@@ -1,11 +1,17 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Upload, AlertTriangle, Download, Eye } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "@/integrations/supabase/client";
-import { getAllCategories, DEFAULT_TAGS, type FieldDef, type ItemAttachment } from "@/lib/vault";
-import { fetchAttachments, uploadAttachment, deleteAttachment } from "@/lib/repositories";
+import {
+  getAllCategories,
+  DEFAULT_TAGS,
+  type Item,
+  type FieldDef,
+  type ItemAttachment,
+} from "@/lib/vault";
+import { fetchAttachments, deleteAttachment } from "@/lib/repositories";
 import { formatBytes } from "@/lib/format";
-import { openAttachment, downloadAttachment } from "@/lib/attachments";
+import { openAttachment, downloadAttachment, uploadFile } from "@/lib/attachments";
+import { getStoredToken, getStoredUser } from "@/lib/client-auth";
 import FileTypeIcon from "@/components/FileTypeIcon";
 import { AttachmentPreviewDialog } from "@/components/AttachmentPreviewDialog";
 import { NewCategoryDialog } from "@/components/NewCategoryDialog";
@@ -80,7 +86,9 @@ export function ItemForm({
 
   useEffect(() => {
     if (!itemId) return;
-    fetchAttachments(itemId).then(setAttachments);
+    fetchAttachments(itemId)
+      .then(setAttachments)
+      .catch((err) => console.error("获取附件失败", err));
   }, [itemId]);
 
   useEffect(() => {
@@ -116,7 +124,6 @@ export function ItemForm({
   function handleCategoryCreated(key: string) {
     setCats(getAllCategories());
     update("category", key);
-    // Reset extra so new schema starts blank
     setValues((s) => ({ ...s, extra: {} }));
     setShowCatDialog(false);
     toast.success("自定义分类已添加");
@@ -126,8 +133,9 @@ export function ItemForm({
     const files = e.target.files;
     if (!files || files.length === 0 || !itemId) return;
 
-    const { data: userData } = await supabase.auth.getUser();
-    if (!userData.user) return;
+    const user = getStoredUser();
+    const token = getStoredToken();
+    if (!user || !token) return;
 
     setUploading(true);
     let successCount = 0;
@@ -138,10 +146,11 @@ export function ItemForm({
         continue;
       }
 
-      const path = `${userData.user.id}/${itemId}/${Date.now()}-${file.name}`;
+      const path = `${user.id}/${itemId}/${Date.now()}-${file.name}`;
       try {
-        const att = await uploadAttachment({
-          userId: userData.user.id,
+        const att = await uploadFile({
+          token,
+          userId: user.id,
           itemId,
           file,
           path,

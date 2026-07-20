@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getCategory, daysRemainingInTrash, TRASH_RETENTION_DAYS } from "@/lib/vault";
@@ -21,13 +21,19 @@ function TrashPage() {
     queryFn: fetchTrashedItems,
   });
 
+  const purgingRef = useRef(false);
+
   useEffect(() => {
-    if (!items.length) return;
+    if (!items.length || purgingRef.current) return;
     const expired = items.filter((i) => i.deleted_at && daysRemainingInTrash(i.deleted_at) === 0);
     if (expired.length === 0) return;
+    purgingRef.current = true;
     purgeExpiredTrash()
       .then(() => qc.invalidateQueries({ queryKey: ["items"] }))
-      .catch(() => {});
+      .catch((err) => console.error("purgeExpiredTrash 失败", err))
+      .finally(() => {
+        purgingRef.current = false;
+      });
   }, [items, qc]);
 
   async function handleRestore(id: string) {
@@ -85,7 +91,7 @@ function TrashPage() {
         <div className="grid gap-3 md:grid-cols-2">
           {items.map((it) => {
             const c = getCategory(it.category);
-            const days = daysRemainingInTrash(it.deleted_at!);
+            const days = it.deleted_at ? daysRemainingInTrash(it.deleted_at) : 0;
             return (
               <div key={it.id} className="panel flex items-center gap-3 p-4">
                 <div
