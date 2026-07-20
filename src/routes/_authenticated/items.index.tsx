@@ -470,12 +470,14 @@ const ItemCard = memo(function ItemCard({
             </span>
           ))}
           <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-            {item.created_at.slice(0, 10)}
+            {new Date(item.created_at).toLocaleDateString("zh-CN")}
           </span>
         </div>
       ) : (
         <div className="mt-auto flex justify-end pt-1">
-          <span className="text-[10px] text-muted-foreground">{item.created_at.slice(0, 10)}</span>
+          <span className="text-[10px] text-muted-foreground">
+            {new Date(item.created_at).toLocaleDateString("zh-CN")}
+          </span>
         </div>
       )}
     </div>
