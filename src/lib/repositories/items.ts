@@ -12,16 +12,6 @@ export async function fetchActiveItems(): Promise<Item[]> {
   return (data ?? []) as Item[];
 }
 
-export async function fetchActiveItemsByCategory(): Promise<Item[]> {
-  const { data, error } = await supabase
-    .from("items")
-    .select(ITEM_LIST_COLUMNS)
-    .is("deleted_at", null)
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (data ?? []) as Item[];
-}
-
 export async function fetchItemById(id: string): Promise<Item | null> {
   const { data, error } = await supabase
     .from("items")

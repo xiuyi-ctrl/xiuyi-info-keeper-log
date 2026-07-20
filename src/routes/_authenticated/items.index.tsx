@@ -1,7 +1,18 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
-import { Search, Eye, EyeOff, Copy, Check, Plus, FileSpreadsheet, Trash2 } from "lucide-react";
+import { memo, useMemo, useState } from "react";
+import {
+  Search,
+  Eye,
+  EyeOff,
+  Copy,
+  Check,
+  Plus,
+  FileSpreadsheet,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   getCategory,
@@ -19,22 +30,26 @@ import {
 } from "@/lib/repositories";
 import type { Item, ItemAttachment } from "@/lib/repositories";
 import { formatBytes, formatDT } from "@/lib/format";
+import { useCopyToClipboard } from "@/hooks/useCopyToClipboard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/items/")({
   component: ItemsList,
 });
 
+const PAGE_SIZE = 30;
+
 function ItemsList() {
   const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [cat, setCat] = useState<string>("all");
   const [tag, setTag] = useState<string>("all");
-  const [reveal, setReveal] = useState<Record<string, boolean>>({});
-  const [copied, setCopied] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const [cats, setCats] = useState(getAllCategories());
+  const { copied, copy } = useCopyToClipboard();
 
   const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ["items", "all"],
@@ -57,15 +72,19 @@ function ItemsList() {
     });
   }, [items, q, cat, tag]);
 
-  async function copyText(id: string, v: string) {
-    try {
-      await navigator.clipboard.writeText(v);
-      setCopied(id);
-      toast.success("已复制到剪贴板");
-      setTimeout(() => setCopied(null), 1500);
-    } catch {
-      toast.error("复制失败");
-    }
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages - 1);
+  const paged = useMemo(
+    () => filtered.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE),
+    [filtered, safePage],
+  );
+
+  // Reset page when filters change
+  const prevFilterKey = `${cat}-${tag}-${q}`;
+  const [prevKey, setPrevKey] = useState(prevFilterKey);
+  if (prevFilterKey !== prevKey) {
+    setPrevKey(prevFilterKey);
+    setPage(0);
   }
 
   async function moveToTrash(id: string, name: string) {
@@ -242,7 +261,7 @@ function ItemsList() {
       </div>
 
       {isLoading ? (
-        <div className="py-16 text-center text-muted-foreground">加载中…</div>
+        <LoadingSkeleton />
       ) : filtered.length === 0 ? (
         <div className="panel py-20 text-center">
           <p className="text-muted-foreground">没有匹配的记录</p>
@@ -251,117 +270,176 @@ function ItemsList() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((it) => {
-            const c = getCategory(it.category);
-            const isRevealed = reveal[it.id];
-            const isParty = it.category === "party";
-            const partyTime = isParty ? String((it.extra ?? {})["time"] ?? "") : "";
-            const partyIntro = isParty ? String((it.extra ?? {})["introducer"] ?? "") : "";
-            return (
-              <div
+        <>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {paged.map((it) => (
+              <ItemCard
                 key={it.id}
-                className="panel group relative flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5"
+                item={it}
+                copied={copied}
+                onCopy={copy}
+                onDelete={moveToTrash}
+              />
+            ))}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === 0}
+                onClick={() => setPage((p) => p - 1)}
               >
-                <button
-                  type="button"
-                  onClick={() => moveToTrash(it.id, it.name)}
-                  title="删除"
-                  className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <div className="flex items-start justify-between gap-3">
-                  <Link
-                    to="/items/$id"
-                    params={{ id: it.id }}
-                    className="flex min-w-0 flex-1 items-start gap-3"
-                  >
-                    <div
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
-                      style={{ background: `${c.color}22`, color: c.color }}
-                    >
-                      <c.icon className="h-5 w-5" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate font-semibold">{it.name}</div>
-                      <div className="truncate text-xs text-muted-foreground">{c.label}</div>
-                    </div>
-                  </Link>
-                </div>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-sm text-muted-foreground">
+                {safePage + 1} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage >= totalPages - 1}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
-                {isParty && (partyTime || partyIntro) && (
-                  <div className="space-y-1.5">
-                    {partyTime && (
-                      <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
-                        <span className="text-xs text-muted-foreground shrink-0">时间</span>
-                        <span className="flex-1 truncate text-xs">{partyTime}</span>
-                      </div>
-                    )}
-                    {partyIntro && (
-                      <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
-                        <span className="text-xs text-muted-foreground shrink-0">介绍人</span>
-                        <span className="flex-1 truncate text-xs">{partyIntro}</span>
-                      </div>
-                    )}
-                  </div>
-                )}
+const ItemCard = memo(function ItemCard({
+  item,
+  copied,
+  onCopy,
+  onDelete,
+}: {
+  item: Item;
+  copied: string | null;
+  onCopy: (id: string, value: string) => void;
+  onDelete: (id: string, name: string) => void;
+}) {
+  const [revealed, setRevealed] = useState(false);
+  const c = getCategory(item.category);
+  const isParty = item.category === "party";
+  const partyTime = isParty ? String((item.extra ?? {})["time"] ?? "") : "";
+  const partyIntro = isParty ? String((item.extra ?? {})["introducer"] ?? "") : "";
 
-                {it.account && (
-                  <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
-                    <span className="text-xs text-muted-foreground shrink-0">账号</span>
-                    <span className="flex-1 truncate font-mono text-xs">{it.account}</span>
-                    <button
-                      onClick={() => copyText(it.id + "acc", it.account!)}
-                      className="text-muted-foreground hover:text-vault"
-                      title="复制账号"
-                    >
-                      {copied === it.id + "acc" ? (
-                        <Check className="h-3.5 w-3.5 text-vault" />
-                      ) : (
-                        <Copy className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </div>
-                )}
+  return (
+    <div className="panel group relative flex flex-col gap-3 p-4 transition-transform hover:-translate-y-0.5">
+      <button
+        type="button"
+        onClick={() => onDelete(item.id, item.name)}
+        title="删除"
+        className="absolute right-2 top-2 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+      <div className="flex items-start justify-between gap-3">
+        <Link
+          to="/items/$id"
+          params={{ id: item.id }}
+          className="flex min-w-0 flex-1 items-start gap-3"
+        >
+          <div
+            className="grid h-10 w-10 shrink-0 place-items-center rounded-md"
+            style={{ background: `${c.color}22`, color: c.color }}
+          >
+            <c.icon className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold">{item.name}</div>
+            <div className="truncate text-xs text-muted-foreground">{c.label}</div>
+          </div>
+        </Link>
+      </div>
 
-                {it.password_hint && (
-                  <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
-                    <span className="text-xs text-muted-foreground shrink-0">提示词</span>
-                    <span className="flex-1 truncate font-mono text-xs">
-                      {isRevealed ? it.password_hint : maskValue(it.password_hint)}
-                    </span>
-                    <button
-                      onClick={() => setReveal((r) => ({ ...r, [it.id]: !r[it.id] }))}
-                      className="text-muted-foreground hover:text-vault"
-                      title={isRevealed ? "隐藏" : "显示"}
-                    >
-                      {isRevealed ? (
-                        <EyeOff className="h-3.5 w-3.5" />
-                      ) : (
-                        <Eye className="h-3.5 w-3.5" />
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                {it.tags && it.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1">
-                    {it.tags.map((t) => (
-                      <span
-                        key={t}
-                        className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground"
-                      >
-                        #{t}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+      {isParty && (partyTime || partyIntro) && (
+        <div className="space-y-1.5">
+          {partyTime && (
+            <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+              <span className="text-xs text-muted-foreground shrink-0">时间</span>
+              <span className="flex-1 truncate text-xs">{partyTime}</span>
+            </div>
+          )}
+          {partyIntro && (
+            <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+              <span className="text-xs text-muted-foreground shrink-0">介绍人</span>
+              <span className="flex-1 truncate text-xs">{partyIntro}</span>
+            </div>
+          )}
         </div>
       )}
+
+      {item.account && (
+        <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+          <span className="text-xs text-muted-foreground shrink-0">账号</span>
+          <span className="flex-1 truncate font-mono text-xs">{item.account}</span>
+          <button
+            onClick={() => onCopy(item.id + "acc", item.account!)}
+            className="text-muted-foreground hover:text-vault"
+            title="复制账号"
+          >
+            {copied === item.id + "acc" ? (
+              <Check className="h-3.5 w-3.5 text-vault" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {item.password_hint && (
+        <div className="flex items-center gap-2 rounded-md bg-surface-elevated px-3 py-2 text-sm">
+          <span className="text-xs text-muted-foreground shrink-0">提示词</span>
+          <span className="flex-1 truncate font-mono text-xs">
+            {revealed ? item.password_hint : maskValue(item.password_hint)}
+          </span>
+          <button
+            onClick={() => setRevealed((r) => !r)}
+            className="text-muted-foreground hover:text-vault"
+            title={revealed ? "隐藏" : "显示"}
+          >
+            {revealed ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+      )}
+
+      {item.tags && item.tags.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {item.tags.map((t) => (
+            <span
+              key={t}
+              className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] text-accent-foreground"
+            >
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+});
+
+function LoadingSkeleton() {
+  return (
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="panel flex flex-col gap-3 p-4">
+          <div className="flex items-start gap-3">
+            <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="h-8 w-full rounded-md" />
+          <Skeleton className="h-4 w-1/2" />
+        </div>
+      ))}
     </div>
   );
 }

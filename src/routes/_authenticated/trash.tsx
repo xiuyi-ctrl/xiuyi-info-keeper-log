@@ -7,6 +7,7 @@ import { getCategory, daysRemainingInTrash, TRASH_RETENTION_DAYS } from "@/lib/v
 import { fetchTrashedItems, restoreItem, purgeItem, purgeExpiredTrash } from "@/lib/repositories";
 import type { Item } from "@/lib/repositories";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/trash")({
@@ -24,7 +25,9 @@ function TrashPage() {
     if (!items.length) return;
     const expired = items.filter((i) => i.deleted_at && daysRemainingInTrash(i.deleted_at) === 0);
     if (expired.length === 0) return;
-    purgeExpiredTrash().then(() => qc.invalidateQueries({ queryKey: ["items"] }));
+    purgeExpiredTrash()
+      .then(() => qc.invalidateQueries({ queryKey: ["items"] }))
+      .catch(() => {});
   }, [items, qc]);
 
   async function handleRestore(id: string) {
@@ -64,7 +67,18 @@ function TrashPage() {
       </div>
 
       {isLoading ? (
-        <div className="py-16 text-center text-muted-foreground">加载中…</div>
+        <div className="grid gap-3 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="panel flex items-center gap-3 p-4">
+              <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+              <Skeleton className="h-8 w-16 rounded-md" />
+            </div>
+          ))}
+        </div>
       ) : items.length === 0 ? (
         <div className="panel py-20 text-center text-muted-foreground">回收站是空的</div>
       ) : (

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -13,7 +14,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { getCategory, getAllCategories } from "@/lib/vault";
-import { fetchActiveItemsByCategory } from "@/lib/repositories";
+import { fetchActiveItems } from "@/lib/repositories";
 import type { Item } from "@/lib/repositories";
 import { Database, Layers, Sparkles } from "lucide-react";
 
@@ -22,41 +23,49 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
 });
 
 function Dashboard() {
-  const { data: items = [] } = useQuery<Item[]>({
+  const { data: items = [], isLoading } = useQuery<Item[]>({
     queryKey: ["items", "all"],
-    queryFn: fetchActiveItemsByCategory,
+    queryFn: fetchActiveItems,
   });
 
   const total = items.length;
   const cats = getAllCategories();
-  const byCat = cats
-    .map((c) => ({
-      name: c.label,
-      key: c.key,
-      value: items.filter((i) => i.category === c.key).length,
-      color: c.color,
-    }))
-    .filter((c) => c.value > 0);
+  const byCat = useMemo(
+    () =>
+      cats
+        .map((c) => ({
+          name: c.label,
+          key: c.key,
+          value: items.filter((i) => i.category === c.key).length,
+          color: c.color,
+        }))
+        .filter((c) => c.value > 0),
+    [items, cats],
+  );
 
-  // Last 7 days series
-  const days: { day: string; 新增: number; 修改: number }[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    d.setDate(d.getDate() - i);
-    const next = new Date(d);
-    next.setDate(next.getDate() + 1);
-    const label = `${d.getMonth() + 1}/${d.getDate()}`;
-    const created = items.filter((i) => {
-      const t = new Date(i.created_at).getTime();
-      return t >= d.getTime() && t < next.getTime();
-    }).length;
-    const updated = items.filter((i) => {
-      const t = new Date(i.updated_at).getTime();
-      return t >= d.getTime() && t < next.getTime() && i.updated_at !== i.created_at;
-    }).length;
-    days.push({ day: label, 新增: created, 修改: updated });
-  }
+  const days = useMemo(() => {
+    const result: { day: string; 新增: number; 修改: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setHours(0, 0, 0, 0);
+      d.setDate(d.getDate() - i);
+      const next = new Date(d);
+      next.setDate(next.getDate() + 1);
+      const label = `${d.getMonth() + 1}/${d.getDate()}`;
+      const start = d.getTime();
+      const end = next.getTime();
+      const created = items.filter((it) => {
+        const t = new Date(it.created_at).getTime();
+        return t >= start && t < end;
+      }).length;
+      const updated = items.filter((it) => {
+        const t = new Date(it.updated_at).getTime();
+        return t >= start && t < end && it.updated_at !== it.created_at;
+      }).length;
+      result.push({ day: label, 新增: created, 修改: updated });
+    }
+    return result;
+  }, [items]);
 
   return (
     <div className="space-y-6">
