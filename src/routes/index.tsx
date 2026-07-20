@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Shield, Clock, Eye, Trash2, BarChart3, Tag } from "lucide-react";
+import { Shield, Clock, Eye, Trash2, BarChart3, KeyRound, Flag, FileUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -13,15 +13,45 @@ export const Route = createFileRoute("/")({
 
 const features = [
   {
-    icon: Shield,
-    title: "分类 + 二级标签",
-    desc: "预设 7 大分类可扩展；每条记录支持多标签，快速筛选。",
+    icon: KeyRound,
+    title: "账号密码",
+    desc: "账号、密码提示词、绑定手机与邮箱，一处归档。",
   },
-  { icon: Clock, title: "修改历程时间轴", desc: "每次改动自动留存完整快照，可对比历史差异。" },
-  { icon: Eye, title: "脱敏开关", desc: "敏感字段默认打码，点眼睛才显示，肩膀上有人也不怕。" },
-  { icon: Tag, title: "全局秒搜", desc: "名称与备注模糊搜索，跨分类瞬间定位。" },
-  { icon: Trash2, title: "回收站 · 7 天", desc: "误删可一键还原，超期自动清除。" },
-  { icon: BarChart3, title: "仪表盘统计", desc: "分类占比、7 天新增修改趋势一目了然。" },
+  {
+    icon: Flag,
+    title: "入党入团",
+    desc: "时间、介绍人、编号，入党入团信息随时可查。",
+  },
+  {
+    icon: FileUp,
+    title: "文件附件",
+    desc: "二维码截图、配置文件、证件照片，支持多文件上传与预览。",
+  },
+  {
+    icon: Shield,
+    title: "脱敏开关",
+    desc: "敏感字段默认打码，点眼睛才显示，肩膀上有人也不怕。",
+  },
+  {
+    icon: Clock,
+    title: "修改留痕",
+    desc: "每次改动自动留存完整快照，可对比历史差异。",
+  },
+  {
+    icon: Trash2,
+    title: "回收站 · 7 天",
+    desc: "误删可一键还原，超期自动清除。",
+  },
+  {
+    icon: BarChart3,
+    title: "仪表盘统计",
+    desc: "分类占比、近 7 天活跃趋势一目了然。",
+  },
+  {
+    icon: Tag,
+    title: "自定义分类",
+    desc: "预置分类可扩展，自定义字段灵活适配你的需求。",
+  },
 ];
 
 function Landing() {
@@ -54,8 +84,7 @@ function Landing() {
           </span>
         </h1>
         <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-          账号、证件、银行卡、履历、社交账号——分类归档，一处管理。 每一次修改都留痕，删除还可后悔 7
-          天。
+          账号、证件、银行卡、履历、社交账号——分类归档，一处管理。
         </p>
         <div className="mt-8 flex justify-center gap-3">
           <Link
@@ -68,7 +97,7 @@ function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {features.map((f) => (
             <div key={f.title} className="panel p-6 transition-transform hover:-translate-y-0.5">
               <f.icon className="h-6 w-6 text-vault" />
