@@ -459,8 +459,8 @@ const ItemCard = memo(function ItemCard({
         </div>
       ))}
 
-      {item.tags && item.tags.length > 0 && (
-        <div className="mt-auto flex flex-wrap gap-1 pt-1">
+      {item.tags && item.tags.length > 0 ? (
+        <div className="mt-auto flex flex-wrap items-center gap-1 pt-1">
           {item.tags.map((t) => (
             <span
               key={t}
@@ -469,6 +469,13 @@ const ItemCard = memo(function ItemCard({
               #{t}
             </span>
           ))}
+          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+            {item.created_at.slice(0, 10)}
+          </span>
+        </div>
+      ) : (
+        <div className="mt-auto flex justify-end pt-1">
+          <span className="text-[10px] text-muted-foreground">{item.created_at.slice(0, 10)}</span>
         </div>
       )}
     </div>
