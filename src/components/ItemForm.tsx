@@ -108,6 +108,7 @@ export function ItemForm({
   function addTag(t?: string) {
     const raw = (t ?? tagInput).trim().replace(/^#/, "");
     if (!raw) return;
+    if (raw.length > 10) return toast.error("标签不超过 10 个字符");
     if (!values.tags.includes(raw)) update("tags", [...values.tags, raw]);
     setTagInput("");
   }
@@ -196,10 +197,15 @@ export function ItemForm({
             <Input
               id="name"
               required
-              maxLength={100}
+              maxLength={30}
               value={values.name}
               onChange={(e) => update("name", e.target.value)}
             />
+            <p className="text-[11px] text-muted-foreground">
+              {values.name.length}/30
+              {values.name.length >= 25 && values.name.length < 30 && "（即将达到上限）"}
+              {values.name.length >= 30 && "（已达上限）"}
+            </p>
           </div>
           <div className="space-y-2">
             <Label>分类</Label>
@@ -259,7 +265,7 @@ export function ItemForm({
             <div className="flex gap-1">
               <Input
                 placeholder="输入后回车"
-                maxLength={20}
+                maxLength={10}
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={(e) => {

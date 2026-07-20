@@ -68,7 +68,7 @@ function ItemsList() {
       if (cat !== "all" && i.category !== cat) return false;
       if (tag !== "all" && !(i.tags ?? []).includes(tag)) return false;
       if (!query) return true;
-      return i.name.toLowerCase().includes(query) || (i.notes ?? "").toLowerCase().includes(query);
+      return i.name.toLowerCase().includes(query);
     });
   }, [items, q, cat, tag]);
 
@@ -215,7 +215,7 @@ function ItemsList() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="全局秒搜：按名称或备注模糊搜索…"
+            placeholder="按名称模糊搜索…"
             className="pl-9"
           />
         </div>
