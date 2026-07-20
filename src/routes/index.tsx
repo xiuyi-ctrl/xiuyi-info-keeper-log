@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Shield, Clock, Trash2, BarChart3, KeyRound, Flag, FileUp, Tags } from "lucide-react";
+import { Shield, Clock, Trash2, BarChart3, KeyRound, Tags } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -14,18 +14,8 @@ export const Route = createFileRoute("/")({
 const features = [
   {
     icon: KeyRound,
-    title: "账号密码",
-    desc: "账号、密码提示词、绑定手机与邮箱，一处归档。",
-  },
-  {
-    icon: Flag,
-    title: "入党入团",
-    desc: "时间、介绍人、编号，入党入团信息随时可查。",
-  },
-  {
-    icon: FileUp,
-    title: "文件附件",
-    desc: "二维码截图、配置文件、证件照片，支持多文件上传与预览。",
+    title: "分类归档",
+    desc: "账号密码、入党入团、文件附件——按类型归档，一处管理。",
   },
   {
     icon: Shield,
@@ -97,7 +87,7 @@ function Landing() {
       </section>
 
       <section className="mx-auto max-w-6xl px-6 pb-24">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
             <div key={f.title} className="panel p-6 transition-transform hover:-translate-y-0.5">
               <f.icon className="h-6 w-6 text-vault" />
