@@ -47,7 +47,7 @@ const features = [
 function Landing() {
   return (
     <div className="flex h-screen flex-col overflow-hidden">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3">
+      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
           <div className="grid h-8 w-8 place-items-center rounded-lg gradient-accent-bg vault-glow">
             <Shield className="h-4 w-4 text-primary-foreground" />
@@ -62,21 +62,21 @@ function Landing() {
         </Link>
       </header>
 
-      <section className="mx-auto max-w-6xl px-6 pt-4 pb-4 text-center">
+      <section className="mx-auto max-w-6xl px-6 pt-6 pb-5 text-center">
         <div className="inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted-foreground">
           <span className="h-1.5 w-1.5 rounded-full bg-vault"></span>
           仅存提示词 · 端到端 RLS 隔离
         </div>
-        <h1 className="mt-3 text-4xl font-bold leading-tight md:text-5xl">
+        <h1 className="mt-4 text-4xl font-bold leading-tight md:text-5xl">
           把私人信息，锁进你自己的
           <span className="block bg-gradient-to-r from-vault to-chart-2 bg-clip-text text-transparent">
             数字保险箱
           </span>
         </h1>
-        <p className="mx-auto mt-3 max-w-xl text-base text-muted-foreground">
+        <p className="mx-auto mt-4 max-w-xl text-base text-muted-foreground">
           账号、证件、银行卡、履历、社交账号——分类归档，一处管理。
         </p>
-        <div className="mt-4 flex justify-center">
+        <div className="mt-5 flex justify-center">
           <Link
             to="/auth"
             className="rounded-lg gradient-accent-bg px-6 py-2.5 font-medium text-primary-foreground vault-glow"
@@ -86,19 +86,19 @@ function Landing() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-6xl flex-1 px-6 pb-3">
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <section className="mx-auto w-full max-w-6xl flex-1 px-6 pb-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
-            <div key={f.title} className="panel p-4 transition-transform hover:-translate-y-0.5">
+            <div key={f.title} className="panel p-5 transition-transform hover:-translate-y-0.5">
               <f.icon className="h-5 w-5 text-vault" />
-              <h3 className="mt-2 text-sm font-semibold">{f.title}</h3>
-              <p className="mt-1 text-xs text-muted-foreground">{f.desc}</p>
+              <h3 className="mt-3 text-sm font-semibold">{f.title}</h3>
+              <p className="mt-1.5 text-xs text-muted-foreground">{f.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <footer className="border-t border-border/60 py-3 text-center text-xs text-muted-foreground">
+      <footer className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} 我的信息保险箱 · 数据加密存储，仅自己可见
       </footer>
     </div>
