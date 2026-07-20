@@ -34,4 +34,6 @@ dist-ssr
 # Uploads
 uploads/
 
-# Environment variables.env
+.env
+.env.local
+.env.production
