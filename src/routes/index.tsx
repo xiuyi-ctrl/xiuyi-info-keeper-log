@@ -1,5 +1,5 @@
 import { createFileRoute, Link, redirect } from "@tanstack/react-router";
-import { Shield, Clock, Eye, Trash2, BarChart3, KeyRound, Flag, FileUp } from "lucide-react";
+import { Shield, Clock, Trash2, BarChart3, KeyRound, Flag, FileUp, Tags } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/")({
@@ -48,7 +48,7 @@ const features = [
     desc: "分类占比、近 7 天活跃趋势一目了然。",
   },
   {
-    icon: Tag,
+    icon: Tags,
     title: "自定义分类",
     desc: "预置分类可扩展，自定义字段灵活适配你的需求。",
   },
